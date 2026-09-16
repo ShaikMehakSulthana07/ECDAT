@@ -1,9 +1,19 @@
 import React, { useState, useRef } from 'react';
+import type { BusinessCriticality, DataSensitivity } from '../types/analysis';
 
 interface ScanInputProps {
-  onScanPath: (path: string) => void;
-  onScanFile: (file: File) => void;
+  onScanPath: (path: string, context: ProjectContext) => void;
+  onScanFile: (file: File, context: ProjectContext) => void;
   isLoading: boolean;
+}
+
+interface ProjectContext {
+  applicationName: string;
+  businessCriticality: BusinessCriticality;
+  dataSensitivity: DataSensitivity;
+  dataLifetimeYears: number;
+  migrationTimeYears: number;
+  threatHorizonYears: number;
 }
 
 export const ScanInput: React.FC<ScanInputProps> = ({
@@ -15,18 +25,29 @@ export const ScanInput: React.FC<ScanInputProps> = ({
   const [pathInput, setPathInput] = useState<string>('../test-target');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // Project context state
+  const [projectContext, setProjectContext] = useState<ProjectContext>({
+    applicationName: '',
+    businessCriticality: 'MEDIUM',
+    dataSensitivity: 'INTERNAL',
+    dataLifetimeYears: 10,
+    migrationTimeYears: 3,
+    threatHorizonYears: 10,
+  });
 
   const handlePathSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!pathInput.trim() || isLoading) return;
-    onScanPath(pathInput.trim());
+    onScanPath(pathInput.trim(), projectContext);
   };
 
   const handleFileSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedFile || isLoading) return;
-    onScanFile(selectedFile);
+    onScanFile(selectedFile, projectContext);
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -71,6 +92,113 @@ export const ScanInput: React.FC<ScanInputProps> = ({
           </svg>
           Zip Archive Upload
         </button>
+      </div>
+
+      {/* Project Analysis Context */}
+      <div className="context-section">
+        <button
+          type="button"
+          className="context-toggle"
+          onClick={() => setShowAdvanced(!showAdvanced)}
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <circle cx="12" cy="12" r="3" />
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+          </svg>
+          {showAdvanced ? 'Hide' : 'Show'} Analysis Configuration
+        </button>
+
+        {showAdvanced && (
+          <div className="context-form">
+            <div className="context-grid">
+              <div className="context-field">
+                <label>Application Name</label>
+                <input
+                  type="text"
+                  className="text-input"
+                  placeholder="e.g. Payment Service"
+                  value={projectContext.applicationName}
+                  onChange={(e) => setProjectContext({...projectContext, applicationName: e.target.value})}
+                  disabled={isLoading}
+                />
+              </div>
+              
+              <div className="context-field">
+                <label>Business Criticality</label>
+                <select
+                  className="select-input"
+                  value={projectContext.businessCriticality}
+                  onChange={(e) => setProjectContext({...projectContext, businessCriticality: e.target.value as BusinessCriticality})}
+                  disabled={isLoading}
+                >
+                  <option value="LOW">Low</option>
+                  <option value="MEDIUM">Medium (Default)</option>
+                  <option value="HIGH">High</option>
+                  <option value="CRITICAL">Critical</option>
+                </select>
+              </div>
+              
+              <div className="context-field">
+                <label>Data Sensitivity</label>
+                <select
+                  className="select-input"
+                  value={projectContext.dataSensitivity}
+                  onChange={(e) => setProjectContext({...projectContext, dataSensitivity: e.target.value as DataSensitivity})}
+                  disabled={isLoading}
+                >
+                  <option value="PUBLIC">Public</option>
+                  <option value="INTERNAL">Internal (Default)</option>
+                  <option value="CONFIDENTIAL">Confidential</option>
+                  <option value="HIGHLY_SENSITIVE">Highly Sensitive</option>
+                </select>
+              </div>
+              
+              <div className="context-field">
+                <label>Data Lifetime (years)</label>
+                <input
+                  type="number"
+                  className="number-input"
+                  min="1"
+                  max="50"
+                  value={projectContext.dataLifetimeYears}
+                  onChange={(e) => setProjectContext({...projectContext, dataLifetimeYears: parseInt(e.target.value) || 10})}
+                  disabled={isLoading}
+                />
+              </div>
+              
+              <div className="context-field">
+                <label>Migration Time (years)</label>
+                <input
+                  type="number"
+                  className="number-input"
+                  min="1"
+                  max="20"
+                  value={projectContext.migrationTimeYears}
+                  onChange={(e) => setProjectContext({...projectContext, migrationTimeYears: parseInt(e.target.value) || 3})}
+                  disabled={isLoading}
+                />
+              </div>
+              
+              <div className="context-field">
+                <label>Threat Horizon (years)</label>
+                <input
+                  type="number"
+                  className="number-input"
+                  min="1"
+                  max="30"
+                  value={projectContext.threatHorizonYears}
+                  onChange={(e) => setProjectContext({...projectContext, threatHorizonYears: parseInt(e.target.value) || 10})}
+                  disabled={isLoading}
+                />
+              </div>
+            </div>
+            
+            <div className="context-note">
+              <strong>Note:</strong> These values are used for Mosca-style quantum risk assessment: 
+              Migration Time + Data Lifetime &gt; Threat Horizon
+            </div>
+          </div>
+        )}
       </div>
 
       {mode === 'path' ? (

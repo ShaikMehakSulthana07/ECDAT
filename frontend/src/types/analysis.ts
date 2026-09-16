@@ -26,6 +26,8 @@ export type PQCRecommendationStatus =
 
 export type MigrationPriority = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
 
+export type MigrationStrategy = 'DIRECT_PQC' | 'HYBRID' | 'NEEDS_ANALYSIS' | 'NO_ACTION' | 'UNKNOWN';
+
 export type AssetCategory =
   | 'ENCRYPTION'
   | 'DIGITAL_SIGNATURE'
@@ -51,7 +53,7 @@ export type BusinessCriticality =
   | 'LOW'
   | 'UNKNOWN';
 
-export type DataSensitivity = 'HIGH' | 'MEDIUM' | 'LOW' | 'UNKNOWN';
+export type DataSensitivity = 'HIGHLY_SENSITIVE' | 'CONFIDENTIAL' | 'INTERNAL' | 'PUBLIC' | 'UNKNOWN';
 
 export interface CryptoFinding {
   algorithm: string;
@@ -119,6 +121,7 @@ export interface RiskAssessment {
   quantumRisk: QuantumRisk;
   confidence: Confidence;
   originalFinding: CryptoFinding;
+  quantumRiskResult?: QuantumRiskResult;
 }
 
 export interface PQCRecommendation {
@@ -129,6 +132,7 @@ export interface PQCRecommendation {
   alternativeAlgorithms: string[];
   rationale: string;
   migrationPriority: MigrationPriority;
+  migrationStrategy?: MigrationStrategy;
   quantumRisk: QuantumRisk;
   confidence: Confidence;
   considerations: string[];
@@ -144,6 +148,17 @@ export interface CBOMRiskInfo {
   riskScore?: number;
   quantumRisk?: string;
   riskFactors?: string[];
+  // Quantum migration risk details (Mosca-style assessment)
+  quantumVulnerable?: boolean;
+  migrationRequired?: boolean;
+  dataLifetimeYears?: number;
+  migrationTimeYears?: number;
+  threatHorizonYears?: number;
+  moscaConditionMet?: boolean;
+  totalExposureYears?: number;
+  migrationUrgency?: string;
+  quantumRiskExplanation?: string;
+  moscaCalculationDetails?: string;
 }
 
 export interface CBOMPQCInfo {
@@ -230,10 +245,67 @@ export interface AnalysisResponse {
   inventory?: CryptoInventory;
   cbom: CBOMDocument;
   summary: AnalysisSummary;
+  context?: ProjectAnalysisContext;
+  certificateFindings?: CertificateArtifactFinding[];
+}
+
+export interface CertificateArtifactFinding {
+  fileName: string;
+  filePath: string;
+  fileType: string;
+  certificateType: string;
+  publicKeyAlgorithm?: string;
+  keySize?: number;
+  signatureAlgorithm?: string;
+  validityDates?: string;
+  confidence: Confidence;
 }
 
 export interface AnalyzeRequest {
   path: string;
+  context?: ProjectAnalysisContext;
+}
+
+export interface ProjectAnalysisContext {
+  applicationName?: string;
+  businessCriticality?: BusinessCriticality;
+  dataSensitivity?: DataSensitivity;
+  dataLifetimeYears?: number;
+  migrationTimeYears?: number;
+  threatHorizonYears?: number;
+}
+
+// Alias for frontend usage
+export type ProjectContext = ProjectAnalysisContext;
+
+export interface QuantumRiskInput {
+  algorithm: string;
+  keySize?: number | null;
+  cryptographicPurpose: string;
+  dataLifetimeYears: number;
+  migrationTimeYears: number;
+  threatHorizonYears: number;
+  businessCriticality: BusinessCriticality;
+  dataSensitivity: DataSensitivity;
+}
+
+export type MigrationUrgency = 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW' | 'NONE' | 'UNKNOWN';
+
+export interface QuantumRiskResult {
+  algorithm: string;
+  quantumVulnerable: boolean;
+  migrationRequired: boolean;
+  migrationTimeYears: number;
+  dataLifetimeYears: number;
+  threatHorizonYears: number;
+  moscaConditionMet: boolean;
+  totalExposureYears: number;
+  yearsUntilThreat: number;
+  businessCriticality: BusinessCriticality;
+  dataSensitivity: DataSensitivity;
+  migrationUrgency: MigrationUrgency;
+  explanation: string;
+  calculationDetails: string;
 }
 
 export interface ErrorResponse {

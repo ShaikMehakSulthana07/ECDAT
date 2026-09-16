@@ -13,6 +13,7 @@ public class CBOMDocument {
     private final int version = 1;
     private final List<CBOMComponent> components;
     private final CBOMMetadata metadata;
+    private String note = "ECDAT CBOM - CycloneDX-inspired format for cryptographic asset inventory. Not fully CycloneDX 1.6 compliant.";
 
     public CBOMDocument() {
         this.serialNumber = "urn:uuid:" + UUID.randomUUID().toString();
@@ -48,6 +49,10 @@ public class CBOMDocument {
 
     public CBOMMetadata getMetadata() {
         return metadata;
+    }
+
+    public String getNote() {
+        return note;
     }
 
     public void addComponent(CBOMComponent component) {

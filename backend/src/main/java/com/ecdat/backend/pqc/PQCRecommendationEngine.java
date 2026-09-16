@@ -45,6 +45,10 @@ public class PQCRecommendationEngine {
             case "SHA256":
             case "SHA-512":
             case "SHA512":
+            case "SHA-3":
+            case "SHA3":
+            case "SHA3-256":
+            case "SHA3-512":
                 return recommendModernHash(finding, assessment);
             case "TLS":
                 return recommendTLS(finding, assessment);
@@ -76,6 +80,7 @@ public class PQCRecommendationEngine {
                     "ML-DSA is a NIST-standardized post-quantum digital-signature scheme suitable for migration planning.";
 
             MigrationPriority priority = determinePriority(quantumRisk, riskLevel);
+            MigrationStrategy strategy = MigrationStrategy.HYBRID; // Recommend hybrid for signatures during transition
 
             return new PQCRecommendation(
                 PQCRecommendationStatus.RECOMMENDED,
@@ -85,6 +90,7 @@ public class PQCRecommendationEngine {
                 alternatives,
                 rationale,
                 priority,
+                strategy,
                 quantumRisk,
                 confidence,
                 considerations
@@ -109,6 +115,7 @@ public class PQCRecommendationEngine {
                     "ML-KEM may be applicable depending on the specific use case.";
 
             MigrationPriority priority = determinePriority(quantumRisk, riskLevel);
+            MigrationStrategy strategy = MigrationStrategy.NEEDS_ANALYSIS;
 
             return new PQCRecommendation(
                 PQCRecommendationStatus.NEEDS_ANALYSIS,
@@ -118,6 +125,7 @@ public class PQCRecommendationEngine {
                 Arrays.asList("ML-KEM (if applicable)"),
                 rationale,
                 priority,
+                strategy,
                 quantumRisk,
                 confidence,
                 considerations
@@ -149,6 +157,7 @@ public class PQCRecommendationEngine {
                 "ML-DSA is the NIST-standardized post-quantum digital-signature scheme suitable for migration.";
 
         MigrationPriority priority = determinePriority(quantumRisk, riskLevel);
+        MigrationStrategy strategy = MigrationStrategy.HYBRID; // Recommend hybrid for signatures during transition
 
         return new PQCRecommendation(
             PQCRecommendationStatus.RECOMMENDED,
@@ -158,6 +167,7 @@ public class PQCRecommendationEngine {
             alternatives,
             rationale,
             priority,
+            strategy,
             quantumRisk,
             confidence,
             considerations
@@ -184,6 +194,7 @@ public class PQCRecommendationEngine {
                 "ML-KEM provides a standardized post-quantum key-establishment mechanism for migration.";
 
         MigrationPriority priority = determinePriority(quantumRisk, riskLevel);
+        MigrationStrategy strategy = MigrationStrategy.HYBRID; // Recommend hybrid for key agreement during transition
 
         return new PQCRecommendation(
             PQCRecommendationStatus.RECOMMENDED,
@@ -193,6 +204,7 @@ public class PQCRecommendationEngine {
             new ArrayList<>(),
             rationale,
             priority,
+            strategy,
             quantumRisk,
             confidence,
             considerations
@@ -228,6 +240,7 @@ public class PQCRecommendationEngine {
                 new ArrayList<>(),
                 rationale,
                 MigrationPriority.LOW,
+                MigrationStrategy.NO_ACTION,
                 quantumRisk,
                 confidence,
                 considerations
@@ -254,6 +267,7 @@ public class PQCRecommendationEngine {
                 Arrays.asList("AES-256"),
                 rationale,
                 MigrationPriority.MEDIUM,
+                MigrationStrategy.DIRECT_PQC,
                 quantumRisk,
                 confidence,
                 considerations
@@ -278,6 +292,7 @@ public class PQCRecommendationEngine {
             new ArrayList<>(),
             rationale,
             MigrationPriority.MEDIUM,
+            MigrationStrategy.NEEDS_ANALYSIS,
             quantumRisk,
             confidence,
             considerations
@@ -309,6 +324,7 @@ public class PQCRecommendationEngine {
             Arrays.asList("SHA-256", "SHA-3"),
             rationale,
             determinePriority(quantumRisk, riskLevel),
+            MigrationStrategy.DIRECT_PQC,
             quantumRisk,
             confidence,
             considerations
@@ -340,6 +356,7 @@ public class PQCRecommendationEngine {
             Arrays.asList("SHA-256", "SHA-3"),
             rationale,
             MigrationPriority.CRITICAL,
+            MigrationStrategy.DIRECT_PQC,
             quantumRisk,
             confidence,
             considerations
@@ -370,6 +387,7 @@ public class PQCRecommendationEngine {
             new ArrayList<>(),
             rationale,
             MigrationPriority.LOW,
+            MigrationStrategy.NO_ACTION,
             quantumRisk,
             confidence,
             considerations
@@ -403,6 +421,7 @@ public class PQCRecommendationEngine {
             new ArrayList<>(),
             rationale,
             MigrationPriority.MEDIUM,
+            MigrationStrategy.NEEDS_ANALYSIS,
             quantumRisk,
             confidence,
             considerations
@@ -431,6 +450,7 @@ public class PQCRecommendationEngine {
             new ArrayList<>(),
             rationale,
             MigrationPriority.MEDIUM,
+            MigrationStrategy.NEEDS_ANALYSIS,
             quantumRisk,
             confidence,
             considerations

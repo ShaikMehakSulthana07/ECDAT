@@ -1,5 +1,6 @@
 package com.ecdat.backend.risk;
 
+import com.ecdat.backend.risk.quantum.QuantumRiskResult;
 import com.ecdat.backend.scanner.CryptoFinding;
 import java.util.ArrayList;
 import java.util.List;
@@ -12,6 +13,7 @@ public class RiskAssessment {
     private final QuantumRisk quantumRisk;
     private final CryptoFinding.Confidence confidence;
     private final CryptoFinding originalFinding;
+    private QuantumRiskResult quantumRiskResult;
 
     public RiskAssessment(int riskScore, List<RiskFactor> factors, QuantumRisk quantumRisk, 
                          CryptoFinding.Confidence confidence, CryptoFinding originalFinding) {
@@ -62,6 +64,14 @@ public class RiskAssessment {
         return originalFinding;
     }
 
+    public QuantumRiskResult getQuantumRiskResult() {
+        return quantumRiskResult;
+    }
+
+    public void setQuantumRiskResult(QuantumRiskResult quantumRiskResult) {
+        this.quantumRiskResult = quantumRiskResult;
+    }
+
     @Override
     public String toString() {
         return "RiskAssessment{" +
@@ -71,6 +81,7 @@ public class RiskAssessment {
                 ", confidence=" + confidence +
                 ", reasons=" + reasons +
                 ", factors=" + factors +
+                ", quantumRiskResult=" + quantumRiskResult +
                 '}';
     }
 }

@@ -320,7 +320,7 @@ class InventoryClassifierTest {
 
         assertNotNull(asset);
         assertEquals(DataSensitivity.UNKNOWN, asset.getDataSensitivity());
-        assertNotEquals(DataSensitivity.HIGH, asset.getDataSensitivity());
+        assertNotEquals(DataSensitivity.HIGHLY_SENSITIVE, asset.getDataSensitivity());
     }
 
     @Test

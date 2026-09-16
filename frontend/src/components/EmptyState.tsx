@@ -18,7 +18,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({ onQuickScan, isLoading }
         </div>
         <h2 className="empty-title">Enterprise Cryptographic Discovery & Post-Quantum Analysis</h2>
         <p className="empty-desc">
-          Analyze software repositories to discover cryptographic primitives, evaluate quantum vulnerability, identify NIST PQC migration candidates (ML-KEM, ML-DSA), and export a CycloneDX 1.6 Cryptography Bill of Materials (CBOM).
+          Analyze software repositories to discover cryptographic primitives, evaluate quantum vulnerability, identify NIST PQC migration candidates (ML-KEM, ML-DSA), and export an ECDAT Cryptography Bill of Materials (CycloneDX-inspired CBOM).
         </p>
       </div>
 
@@ -70,9 +70,9 @@ export const EmptyState: React.FC<EmptyStateProps> = ({ onQuickScan, isLoading }
               <polyline points="14 2 14 8 20 8" />
             </svg>
           </div>
-          <h4 className="pillar-title">CycloneDX 1.6 CBOM</h4>
+          <h4 className="pillar-title">CycloneDX-Inspired CBOM</h4>
           <p className="pillar-text">
-            Standardized machine-readable Cryptography Bill of Materials embedding source code evidence and risk posture.
+            Machine-readable inventory of cryptographic assets and posture following CycloneDX-inspired CBOM structures.
           </p>
         </div>
       </div>

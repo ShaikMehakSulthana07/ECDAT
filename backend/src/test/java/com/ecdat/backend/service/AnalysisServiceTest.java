@@ -3,6 +3,7 @@ package com.ecdat.backend.service;
 import com.ecdat.backend.cbom.CBOMComponent;
 import com.ecdat.backend.cbom.CBOMDocument;
 import com.ecdat.backend.dto.AnalysisResponse;
+import com.ecdat.backend.dto.ProjectAnalysisContext;
 import com.ecdat.backend.inventory.AssetCategory;
 import com.ecdat.backend.inventory.CryptoAsset;
 import com.ecdat.backend.inventory.CryptoUsageCategory;
@@ -52,7 +53,8 @@ class AnalysisServiceTest {
         File testTarget = getTestTargetDir();
         assertTrue(testTarget.exists(), "test-target directory should exist.");
 
-        AnalysisResponse response = analysisService.analyzeDirectory(testTarget.getAbsolutePath());
+        ProjectAnalysisContext context = new ProjectAnalysisContext();
+        AnalysisResponse response = analysisService.analyzeDirectory(testTarget.getAbsolutePath(), context);
 
         assertNotNull(response);
         assertEquals("SUCCESS", response.getStatus());
@@ -71,25 +73,28 @@ class AnalysisServiceTest {
     // 2. Empty or missing input path
     @Test
     void testEmptyOrNullPathThrowsException() {
-        assertThrows(IllegalArgumentException.class, () -> analysisService.analyzeDirectory(null));
-        assertThrows(IllegalArgumentException.class, () -> analysisService.analyzeDirectory(""));
-        assertThrows(IllegalArgumentException.class, () -> analysisService.analyzeDirectory("   "));
+        ProjectAnalysisContext context = new ProjectAnalysisContext();
+        assertThrows(IllegalArgumentException.class, () -> analysisService.analyzeDirectory(null, context));
+        assertThrows(IllegalArgumentException.class, () -> analysisService.analyzeDirectory("", context));
+        assertThrows(IllegalArgumentException.class, () -> analysisService.analyzeDirectory("   ", context));
     }
 
     // 3. Nonexistent directory path
     @Test
     void testNonexistentPathThrowsException() {
+        ProjectAnalysisContext context = new ProjectAnalysisContext();
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
-                () -> analysisService.analyzeDirectory("non/existent/path/for/sure/12345"));
+                () -> analysisService.analyzeDirectory("non/existent/path/for/sure/12345", context));
         assertTrue(ex.getMessage().contains("does not exist"));
     }
 
     // 4. Path is a file, not a directory
     @Test
     void testFilePathThrowsException(@TempDir Path tempDir) throws IOException {
+        ProjectAnalysisContext context = new ProjectAnalysisContext();
         Path tempFile = Files.createFile(tempDir.resolve("sample.java"));
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
-                () -> analysisService.analyzeDirectory(tempFile.toString()));
+                () -> analysisService.analyzeDirectory(tempFile.toString(), context));
         assertTrue(ex.getMessage().contains("is not a directory"));
     }
 
@@ -107,7 +112,8 @@ class AnalysisServiceTest {
         Path malformedFile = tempDir.resolve("Malformed.java");
         Files.writeString(malformedFile, "public class Malformed { int x = ; void unclosed() {");
 
-        AnalysisResponse response = analysisService.analyzeDirectory(tempDir.toString());
+        ProjectAnalysisContext context = new ProjectAnalysisContext();
+        AnalysisResponse response = analysisService.analyzeDirectory(tempDir.toString(), context);
 
         assertNotNull(response);
         assertEquals("SUCCESS", response.getStatus());
@@ -125,7 +131,8 @@ class AnalysisServiceTest {
                 "    Signature s = Signature.getInstance(\"SHA256withECDSA\");\n" +
                 "  }\n}\n");
 
-        AnalysisResponse response = analysisService.analyzeDirectory(tempDir.toString());
+        ProjectAnalysisContext context = new ProjectAnalysisContext();
+        AnalysisResponse response = analysisService.analyzeDirectory(tempDir.toString(), context);
 
         assertEquals(1, response.getFindings().size());
         assertEquals(1, response.getRiskAssessments().size());
@@ -145,7 +152,8 @@ class AnalysisServiceTest {
                 "    Signature s = Signature.getInstance(\"SHA256withECDSA\");\n" +
                 "  }\n}\n");
 
-        AnalysisResponse response = analysisService.analyzeDirectory(tempDir.toString());
+        ProjectAnalysisContext context = new ProjectAnalysisContext();
+        AnalysisResponse response = analysisService.analyzeDirectory(tempDir.toString(), context);
 
         assertEquals(1, response.getPqcRecommendations().size());
         PQCRecommendation rec = response.getPqcRecommendations().get(0);
@@ -163,7 +171,8 @@ class AnalysisServiceTest {
                 "    Signature s = Signature.getInstance(\"SHA256withECDSA\");\n" +
                 "  }\n}\n");
 
-        AnalysisResponse response = analysisService.analyzeDirectory(tempDir.toString());
+        ProjectAnalysisContext context = new ProjectAnalysisContext();
+        AnalysisResponse response = analysisService.analyzeDirectory(tempDir.toString(), context);
 
         CBOMDocument cbom = response.getCbom();
         assertNotNull(cbom);
@@ -196,7 +205,8 @@ class AnalysisServiceTest {
         MockMultipartFile zipFile = new MockMultipartFile(
                 "file", "project.zip", "application/zip", baos.toByteArray());
 
-        AnalysisResponse response = analysisService.analyzeArchive(zipFile);
+        ProjectAnalysisContext context = new ProjectAnalysisContext();
+        AnalysisResponse response = analysisService.analyzeArchive(zipFile, context);
 
         assertNotNull(response);
         assertEquals("SUCCESS", response.getStatus());
@@ -220,7 +230,8 @@ class AnalysisServiceTest {
         MockMultipartFile maliciousZip = new MockMultipartFile(
                 "file", "malicious.zip", "application/zip", baos.toByteArray());
 
-        assertThrows(SecurityException.class, () -> analysisService.analyzeArchive(maliciousZip));
+        ProjectAnalysisContext context = new ProjectAnalysisContext();
+        assertThrows(SecurityException.class, () -> analysisService.analyzeArchive(maliciousZip, context));
     }
 
     // 11. Pipeline correctly populates Enterprise Inventory and Summary
@@ -234,7 +245,8 @@ class AnalysisServiceTest {
                 "    MessageDigest md = MessageDigest.getInstance(\"MD5\");\n" +
                 "  }\n}\n");
 
-        AnalysisResponse response = analysisService.analyzeDirectory(tempDir.toString());
+        ProjectAnalysisContext context = new ProjectAnalysisContext();
+        AnalysisResponse response = analysisService.analyzeDirectory(tempDir.toString(), context);
 
         assertNotNull(response.getInventory());
         assertEquals(2, response.getCryptoAssets().size());

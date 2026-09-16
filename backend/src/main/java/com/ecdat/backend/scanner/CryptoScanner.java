@@ -50,7 +50,8 @@ public class CryptoScanner extends VoidVisitorAdapter<List<CryptoFinding>> {
     }
 
     private boolean isCryptoAPI(String scope) {
-        return List.of("Cipher", "KeyPairGenerator", "Signature", "KeyAgreement", "MessageDigest", "SSLContext").contains(scope);
+        return List.of("Cipher", "KeyPairGenerator", "Signature", "KeyAgreement", "MessageDigest", 
+                       "SSLContext", "KeyFactory", "SecretKeyFactory", "KeyGenerator", "Mac").contains(scope);
     }
 
     private void parseAlgorithmDetails(String scope, String literalValue, CryptoFinding finding) {
@@ -62,6 +63,19 @@ public class CryptoScanner extends VoidVisitorAdapter<List<CryptoFinding>> {
                 if (upperVal.startsWith("AES")) {
                     finding.setAlgorithm("AES");
                     finding.setVariant(literalValue.contains("/") ? literalValue.split("/")[1] : "AES");
+                } else if (upperVal.startsWith("DES")) {
+                    finding.setAlgorithm("DES");
+                    finding.setVariant(literalValue);
+                } else if (upperVal.contains("3DES") || upperVal.contains("DESede")) {
+                    finding.setAlgorithm("3DES");
+                    finding.setVariant(literalValue);
+                } else if (upperVal.contains("ChaCha20") || upperVal.contains("CHACHA20")) {
+                    finding.setAlgorithm("ChaCha20");
+                    finding.setVariant(literalValue);
+                } else if (upperVal.contains("RSA")) {
+                    finding.setAlgorithm("RSA");
+                    finding.setVariant(literalValue);
+                    finding.setPurpose(CryptoFinding.Purpose.ENCRYPTION);
                 }
                 break;
             case "KeyPairGenerator":
@@ -69,6 +83,18 @@ public class CryptoScanner extends VoidVisitorAdapter<List<CryptoFinding>> {
                 if (upperVal.equals("RSA")) {
                     finding.setAlgorithm("RSA");
                     finding.setVariant("RSA");
+                } else if (upperVal.contains("EC") || upperVal.contains("EllipticCurve")) {
+                    finding.setAlgorithm("EC");
+                    finding.setVariant(literalValue);
+                } else if (upperVal.contains("DSA")) {
+                    finding.setAlgorithm("DSA");
+                    finding.setVariant(literalValue);
+                } else if (upperVal.contains("DH")) {
+                    finding.setAlgorithm("DH");
+                    finding.setVariant(literalValue);
+                } else if (upperVal.contains("Ed25519")) {
+                    finding.setAlgorithm("Ed25519");
+                    finding.setVariant(literalValue);
                 }
                 break;
             case "Signature":
@@ -76,12 +102,24 @@ public class CryptoScanner extends VoidVisitorAdapter<List<CryptoFinding>> {
                 if (upperVal.contains("ECDSA")) {
                     finding.setAlgorithm("ECDSA");
                     finding.setVariant(literalValue);
+                } else if (upperVal.contains("RSA")) {
+                    finding.setAlgorithm("RSA");
+                    finding.setVariant(literalValue);
+                } else if (upperVal.contains("DSA")) {
+                    finding.setAlgorithm("DSA");
+                    finding.setVariant(literalValue);
+                } else if (upperVal.contains("Ed25519")) {
+                    finding.setAlgorithm("Ed25519");
+                    finding.setVariant(literalValue);
                 }
                 break;
             case "KeyAgreement":
                 finding.setPurpose(CryptoFinding.Purpose.KEY_AGREEMENT);
                 if (upperVal.equals("ECDH")) {
                     finding.setAlgorithm("ECDH");
+                } else if (upperVal.contains("DH")) {
+                    finding.setAlgorithm("DH");
+                    finding.setVariant(literalValue);
                 }
                 break;
             case "MessageDigest":
@@ -92,6 +130,27 @@ public class CryptoScanner extends VoidVisitorAdapter<List<CryptoFinding>> {
                 finding.setPurpose(CryptoFinding.Purpose.PROTOCOL);
                 finding.setAlgorithm("TLS");
                 finding.setVariant(literalValue);
+                break;
+            case "KeyGenerator":
+                finding.setPurpose(CryptoFinding.Purpose.KEY_GENERATION);
+                if (upperVal.startsWith("AES")) {
+                    finding.setAlgorithm("AES");
+                    finding.setVariant(literalValue);
+                } else if (upperVal.contains("ChaCha20")) {
+                    finding.setAlgorithm("ChaCha20");
+                    finding.setVariant(literalValue);
+                } else if (upperVal.contains("HmacSHA")) {
+                    finding.setAlgorithm("HMAC");
+                    finding.setVariant(literalValue);
+                    finding.setPurpose(CryptoFinding.Purpose.HASHING);
+                }
+                break;
+            case "Mac":
+                finding.setPurpose(CryptoFinding.Purpose.HASHING);
+                if (upperVal.contains("Hmac")) {
+                    finding.setAlgorithm("HMAC");
+                    finding.setVariant(literalValue);
+                }
                 break;
         }
     }

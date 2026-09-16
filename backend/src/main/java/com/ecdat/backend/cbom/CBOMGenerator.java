@@ -51,8 +51,16 @@ public class CBOMGenerator {
         String assetCategoryStr = finding.getAssetCategory() != null ? finding.getAssetCategory().name() : null;
         String usageCategoryStr = finding.getUsageCategory() != null ? finding.getUsageCategory().name() : null;
         String lifecycleStatusStr = finding.getLifecycleStatus() != null ? finding.getLifecycleStatus().name() : null;
-        String businessCriticalityStr = finding.getBusinessCriticality() != null ? finding.getBusinessCriticality().name() : null;
-        String dataSensitivityStr = finding.getDataSensitivity() != null ? finding.getDataSensitivity().name() : null;
+        String businessCriticalityStr = finding.getBusinessCriticality() != null && finding.getBusinessCriticality() != com.ecdat.backend.inventory.BusinessCriticality.UNKNOWN
+            ? finding.getBusinessCriticality().name()
+            : (assessment != null && assessment.getQuantumRiskResult() != null && assessment.getQuantumRiskResult().getBusinessCriticality() != null
+                ? assessment.getQuantumRiskResult().getBusinessCriticality().name()
+                : null);
+        String dataSensitivityStr = finding.getDataSensitivity() != null && finding.getDataSensitivity() != com.ecdat.backend.inventory.DataSensitivity.UNKNOWN
+            ? finding.getDataSensitivity().name()
+            : (assessment != null && assessment.getQuantumRiskResult() != null && assessment.getQuantumRiskResult().getDataSensitivity() != null
+                ? assessment.getQuantumRiskResult().getDataSensitivity().name()
+                : null);
 
         CBOMCryptoProperties cryptoProperties = new CBOMCryptoProperties(
             finding.getAlgorithm(),
@@ -137,12 +145,29 @@ public class CBOMGenerator {
     }
 
     private CBOMRiskInfo createRiskInfo(RiskAssessment assessment) {
-        return new CBOMRiskInfo(
+        CBOMRiskInfo riskInfo = new CBOMRiskInfo(
             assessment.getRiskLevel() != null ? assessment.getRiskLevel().name() : null,
             assessment.getRiskScore(),
             assessment.getQuantumRisk() != null ? assessment.getQuantumRisk().name() : null,
             assessment.getReasons()
         );
+        
+        // Populate quantum migration risk details if available
+        if (assessment.getQuantumRiskResult() != null) {
+            riskInfo.setQuantumVulnerable(assessment.getQuantumRiskResult().isQuantumVulnerable());
+            riskInfo.setMigrationRequired(assessment.getQuantumRiskResult().isMigrationRequired());
+            riskInfo.setDataLifetimeYears(assessment.getQuantumRiskResult().getDataLifetimeYears());
+            riskInfo.setMigrationTimeYears(assessment.getQuantumRiskResult().getMigrationTimeYears());
+            riskInfo.setThreatHorizonYears(assessment.getQuantumRiskResult().getThreatHorizonYears());
+            riskInfo.setMoscaConditionMet(assessment.getQuantumRiskResult().isMoscaConditionMet());
+            riskInfo.setTotalExposureYears(assessment.getQuantumRiskResult().getTotalExposureYears());
+            riskInfo.setMigrationUrgency(assessment.getQuantumRiskResult().getMigrationUrgency() != null ? 
+                assessment.getQuantumRiskResult().getMigrationUrgency().name() : null);
+            riskInfo.setQuantumRiskExplanation(assessment.getQuantumRiskResult().getExplanation());
+            riskInfo.setMoscaCalculationDetails(assessment.getQuantumRiskResult().getCalculationDetails());
+        }
+        
+        return riskInfo;
     }
 
     private CBOMPQCInfo createPQCInfo(PQCRecommendation recommendation) {

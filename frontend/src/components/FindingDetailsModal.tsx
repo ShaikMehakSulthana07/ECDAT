@@ -241,6 +241,74 @@ export const FindingDetailsModal: React.FC<FindingDetailsModalProps> = ({
                   </div>
                 </div>
               )}
+
+              {/* Quantum Migration Risk Assessment (Mosca-style) */}
+              {riskAssessment?.quantumRiskResult && (
+                <div className="detail-section highlight-quantum">
+                  <h3 className="section-heading">Quantum Migration Risk Assessment (Mosca)</h3>
+                  
+                  <div className="quantum-status-box">
+                    <div className="quantum-status-header">
+                      <span>Quantum Vulnerable:</span>
+                      <span className={`quantum-badge ${riskAssessment.quantumRiskResult.quantumVulnerable ? 'vulnerable' : 'resistant'}`}>
+                        {riskAssessment.quantumRiskResult.quantumVulnerable ? 'YES' : 'NO'}
+                      </span>
+                    </div>
+                    <div className="quantum-status-header">
+                      <span>Migration Required:</span>
+                      <span className={`quantum-badge ${riskAssessment.quantumRiskResult.migrationRequired ? 'required' : 'not-required'}`}>
+                        {riskAssessment.quantumRiskResult.migrationRequired ? 'YES' : 'NO'}
+                      </span>
+                    </div>
+                    <div className="quantum-status-header">
+                      <span>Migration Urgency:</span>
+                      <span className={`priority-badge ${riskAssessment.quantumRiskResult.migrationUrgency?.toLowerCase() || 'low'}`}>
+                        {riskAssessment.quantumRiskResult.migrationUrgency || 'UNKNOWN'}
+                      </span>
+                    </div>
+                  </div>
+
+                  <dl className="property-list">
+                    <div className="prop-row">
+                      <dt>Mosca Calculation</dt>
+                      <dd className="font-mono">
+                        {riskAssessment.quantumRiskResult.migrationTimeYears} + {riskAssessment.quantumRiskResult.dataLifetimeYears} = {riskAssessment.quantumRiskResult.totalExposureYears}
+                        {riskAssessment.quantumRiskResult.moscaConditionMet ? (
+                          <span className="text-success"> &gt; {riskAssessment.quantumRiskResult.threatHorizonYears} ✓</span>
+                        ) : (
+                          <span className="text-muted"> ≤ {riskAssessment.quantumRiskResult.threatHorizonYears}</span>
+                        )}
+                      </dd>
+                    </div>
+                    <div className="prop-row">
+                      <dt>Data Lifetime</dt>
+                      <dd>{riskAssessment.quantumRiskResult.dataLifetimeYears} years</dd>
+                    </div>
+                    <div className="prop-row">
+                      <dt>Migration Time</dt>
+                      <dd>{riskAssessment.quantumRiskResult.migrationTimeYears} years</dd>
+                    </div>
+                    <div className="prop-row">
+                      <dt>Threat Horizon</dt>
+                      <dd>{riskAssessment.quantumRiskResult.threatHorizonYears} years</dd>
+                    </div>
+                    <div className="prop-row">
+                      <dt>Total Exposure</dt>
+                      <dd>{riskAssessment.quantumRiskResult.totalExposureYears} years</dd>
+                    </div>
+                  </dl>
+
+                  <div className="quantum-block">
+                    <span className="quantum-subheading">Assessment Explanation:</span>
+                    <pre className="quantum-text">{riskAssessment.quantumRiskResult.explanation}</pre>
+                  </div>
+
+                  <div className="quantum-block">
+                    <span className="quantum-subheading">Calculation Details:</span>
+                    <pre className="quantum-text font-mono">{riskAssessment.quantumRiskResult.calculationDetails}</pre>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Right Column: PQC Migration Details */}

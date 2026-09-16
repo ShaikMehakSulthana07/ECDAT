@@ -1,65 +1,112 @@
 :root {
-  --bg-main: #090d16;
-  --bg-card: #0f172a;
-  --bg-card-hover: #1e293b;
-  --bg-subtle: #131d31;
-  --border-color: #1e293b;
-  --border-subtle: #2d3b55;
-  --border-focus: #38bdf8;
-  
-  --text-primary: #f8fafc;
+  /* Surface and Background Foundation */
+  --bg-app: #090d14;
+  --bg-sidebar: #0e131d;
+  --bg-topbar: #0e131d;
+  --bg-surface: #131926;
+  --bg-surface-elevated: #182030;
+  --bg-surface-hover: #1e273b;
+  --bg-surface-subtle: #0f1522;
+
+  /* Borders & Dividers */
+  --border-subtle: #1e283c;
+  --border-default: #26334d;
+  --border-strong: #334363;
+  --border-focus: #3b82f6;
+
+  /* Typography */
+  --text-primary: #f1f5f9;
   --text-secondary: #94a3b8;
   --text-muted: #64748b;
-  
-  --primary: #38bdf8;
-  --primary-glow: rgba(56, 189, 248, 0.2);
-  --accent-cyan: #06b6d4;
-  --accent-indigo: #6366f1;
-  
-  /* Risk Palette */
+  --text-inverted: #090d14;
+
+  /* Primary Enterprise Accent */
+  --primary: #3b82f6;
+  --primary-hover: #2563eb;
+  --primary-active: #1d4ed8;
+  --primary-subtle: rgba(59, 130, 246, 0.12);
+  --primary-border: rgba(59, 130, 246, 0.35);
+
+  /* Semantic Status & Risk Palette */
   --risk-critical: #ef4444;
-  --risk-critical-bg: rgba(239, 68, 68, 0.15);
-  --risk-critical-border: rgba(239, 68, 68, 0.4);
-  
+  --risk-critical-bg: rgba(239, 68, 68, 0.12);
+  --risk-critical-border: rgba(239, 68, 68, 0.35);
+
   --risk-high: #f97316;
-  --risk-high-bg: rgba(249, 115, 22, 0.15);
-  --risk-high-border: rgba(249, 115, 22, 0.4);
-  
-  --risk-medium: #eab308;
-  --risk-medium-bg: rgba(234, 179, 8, 0.15);
-  --risk-medium-border: rgba(234, 179, 8, 0.4);
-  
+  --risk-high-bg: rgba(249, 115, 22, 0.12);
+  --risk-high-border: rgba(249, 115, 22, 0.35);
+
+  --risk-medium: #f59e0b;
+  --risk-medium-bg: rgba(245, 158, 11, 0.12);
+  --risk-medium-border: rgba(245, 158, 11, 0.35);
+
   --risk-low: #10b981;
-  --risk-low-bg: rgba(16, 185, 129, 0.15);
-  --risk-low-border: rgba(16, 185, 129, 0.4);
-  
-  --quantum-high: #a855f7;
-  --quantum-high-bg: rgba(168, 85, 247, 0.15);
-  --quantum-high-border: rgba(168, 85, 247, 0.4);
+  --risk-low-bg: rgba(16, 185, 129, 0.12);
+  --risk-low-border: rgba(16, 185, 129, 0.35);
 
-  --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-  --font-mono: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', Consolas, Monaco, monospace;
+  /* Quantum Status */
+  --quantum-vulnerable: #ef4444;
+  --quantum-vulnerable-bg: rgba(239, 68, 68, 0.12);
+  --quantum-vulnerable-border: rgba(239, 68, 68, 0.35);
 
-  font-family: var(--font-sans);
-  color-scheme: dark;
-  color: var(--text-primary);
-  background-color: var(--bg-main);
-  line-height: 1.5;
-  font-weight: 400;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  --quantum-warning: #f97316;
+  --quantum-warning-bg: rgba(249, 115, 22, 0.12);
+  --quantum-warning-border: rgba(249, 115, 22, 0.35);
+
+  --quantum-safe: #10b981;
+  --quantum-safe-bg: rgba(16, 185, 129, 0.12);
+  --quantum-safe-border: rgba(16, 185, 129, 0.35);
+
+  --quantum-neutral: #64748b;
+  --quantum-neutral-bg: rgba(100, 116, 139, 0.12);
+  --quantum-neutral-border: rgba(100, 116, 139, 0.35);
+
+  /* PQC Migration Accent */
+  --pqc-accent: #60a5fa;
+  --pqc-accent-bg: rgba(96, 165, 250, 0.12);
+  --pqc-accent-border: rgba(96, 165, 250, 0.35);
+
+  /* Fonts */
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Cascadia Code', 'Fira Code', Menlo, Monaco, Consolas, monospace;
+
+  /* Radii & Shadows */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -2px rgba(0, 0, 0, 0.3);
+  --shadow-drawer: -4px 0 24px rgba(0, 0, 0, 0.6);
+
+  /* Layout dimensions */
+  --sidebar-width: 260px;
+  --sidebar-collapsed-width: 68px;
+  --topbar-height: 60px;
 }
 
-* {
+/* Reset & Box Sizing */
+*, *::before, *::after {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
 }
 
+html {
+  font-family: var(--font-sans);
+  color-scheme: dark;
+  background-color: var(--bg-app);
+  color: var(--text-primary);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
 body {
   margin: 0;
   padding: 0;
-  background-color: var(--bg-main);
+  background-color: var(--bg-app);
   color: var(--text-primary);
   min-height: 100vh;
   overflow-x: hidden;
@@ -71,47 +118,89 @@ body {
   flex-direction: column;
 }
 
+/* Typography Helpers */
 code, pre, kbd, .font-mono {
   font-family: var(--font-mono);
-}
-
-button {
-  font-family: inherit;
-  cursor: pointer;
-  border: none;
-  background: none;
-  transition: all 0.2s ease-in-out;
-}
-
-input, select, textarea {
-  font-family: inherit;
-  color: inherit;
 }
 
 a {
   color: var(--primary);
   text-decoration: none;
+  transition: color 0.15s ease;
 }
 
 a:hover {
+  color: var(--primary-hover);
   text-decoration: underline;
+}
+
+button {
+  font-family: inherit;
+  font-size: inherit;
+  cursor: pointer;
+  border: none;
+  background: none;
+  color: inherit;
+  transition: all 0.15s ease;
+}
+
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--border-focus);
+  outline-offset: 1px;
+}
+
+input, select, textarea {
+  font-family: inherit;
+  font-size: inherit;
+  color: var(--text-primary);
+  background-color: var(--bg-surface-subtle);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+input:hover, select:hover, textarea:hover {
+  border-color: var(--border-strong);
+}
+
+input:focus, select:focus, textarea:focus {
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 1px var(--border-focus);
+  outline: none;
 }
 
 /* Custom Scrollbars */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--bg-main);
+  background: var(--bg-app);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #27354f;
-  border-radius: 4px;
+  background: var(--border-default);
+  border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #3b4d6d;
+  background: var(--border-strong);
+}
+
+/* Accessibility Focus Ring */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
 }

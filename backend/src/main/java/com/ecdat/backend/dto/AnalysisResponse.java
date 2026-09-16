@@ -6,6 +6,7 @@ import com.ecdat.backend.inventory.CryptoInventory;
 import com.ecdat.backend.pqc.PQCRecommendation;
 import com.ecdat.backend.risk.RiskAssessment;
 import com.ecdat.backend.scanner.CryptoFinding;
+import com.ecdat.backend.scanner.certificate.CertificateArtifactFinding;
 import com.fasterxml.jackson.annotation.JsonInclude;
 
 import java.util.ArrayList;
@@ -22,6 +23,8 @@ public class AnalysisResponse {
     private CryptoInventory inventory;
     private CBOMDocument cbom;
     private AnalysisSummary summary;
+    private ProjectAnalysisContext context;
+    private List<CertificateArtifactFinding> certificateFindings;
 
     public AnalysisResponse() {
         this.findings = new ArrayList<>();
@@ -92,4 +95,19 @@ public class AnalysisResponse {
 
     public AnalysisSummary getSummary() { return summary; }
     public void setSummary(AnalysisSummary summary) { this.summary = summary; }
+
+    public ProjectAnalysisContext getContext() { return context; }
+    public void setContext(ProjectAnalysisContext context) { this.context = context; }
+
+    public AnalysisResponse withContext(ProjectAnalysisContext context) {
+        this.context = context;
+        return this;
+    }
+
+    public List<CertificateArtifactFinding> getCertificateFindings() { 
+        return certificateFindings != null ? new ArrayList<>(certificateFindings) : new ArrayList<>(); 
+    }
+    public void setCertificateFindings(List<CertificateArtifactFinding> certificateFindings) {
+        this.certificateFindings = certificateFindings != null ? new ArrayList<>(certificateFindings) : new ArrayList<>();
+    }
 }

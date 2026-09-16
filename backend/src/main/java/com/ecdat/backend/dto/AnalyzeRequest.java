@@ -8,6 +8,8 @@ public class AnalyzeRequest {
 
     @JsonAlias({"sourcePath", "projectPath", "dirPath"})
     private String path;
+    
+    private ProjectAnalysisContext context;
 
     public AnalyzeRequest() {
     }
@@ -30,5 +32,13 @@ public class AnalyzeRequest {
 
     public void setSourcePath(String sourcePath) {
         this.path = sourcePath;
+    }
+
+    public ProjectAnalysisContext getContext() {
+        return context;
+    }
+
+    public void setContext(ProjectAnalysisContext context) {
+        this.context = context;
     }
 }

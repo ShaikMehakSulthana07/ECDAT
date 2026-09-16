@@ -13,6 +13,7 @@ public class PQCRecommendation {
     private final List<String> alternativeAlgorithms;
     private final String rationale;
     private final MigrationPriority migrationPriority;
+    private final MigrationStrategy migrationStrategy;
     private final QuantumRisk quantumRisk;
     private final CryptoFinding.Confidence confidence;
     private final List<String> considerations;
@@ -24,6 +25,7 @@ public class PQCRecommendation {
                            List<String> alternativeAlgorithms,
                            String rationale,
                            MigrationPriority migrationPriority,
+                           MigrationStrategy migrationStrategy,
                            QuantumRisk quantumRisk,
                            CryptoFinding.Confidence confidence,
                            List<String> considerations) {
@@ -34,9 +36,26 @@ public class PQCRecommendation {
         this.alternativeAlgorithms = new ArrayList<>(alternativeAlgorithms);
         this.rationale = rationale;
         this.migrationPriority = migrationPriority;
+        this.migrationStrategy = migrationStrategy != null ? migrationStrategy : MigrationStrategy.UNKNOWN;
         this.quantumRisk = quantumRisk;
         this.confidence = confidence;
         this.considerations = new ArrayList<>(considerations);
+    }
+
+    // Legacy constructor for backward compatibility
+    public PQCRecommendation(PQCRecommendationStatus recommendationStatus,
+                           String currentAlgorithm,
+                           CryptoFinding.Purpose currentPurpose,
+                           String recommendedAlgorithm,
+                           List<String> alternativeAlgorithms,
+                           String rationale,
+                           MigrationPriority migrationPriority,
+                           QuantumRisk quantumRisk,
+                           CryptoFinding.Confidence confidence,
+                           List<String> considerations) {
+        this(recommendationStatus, currentAlgorithm, currentPurpose, recommendedAlgorithm,
+             alternativeAlgorithms, rationale, migrationPriority, MigrationStrategy.UNKNOWN,
+             quantumRisk, confidence, considerations);
     }
 
     public PQCRecommendationStatus getRecommendationStatus() {
@@ -67,6 +86,10 @@ public class PQCRecommendation {
         return migrationPriority;
     }
 
+    public MigrationStrategy getMigrationStrategy() {
+        return migrationStrategy;
+    }
+
     public QuantumRisk getQuantumRisk() {
         return quantumRisk;
     }
@@ -89,6 +112,7 @@ public class PQCRecommendation {
                 ", alternativeAlgorithms=" + alternativeAlgorithms +
                 ", rationale='" + rationale + '\'' +
                 ", migrationPriority=" + migrationPriority +
+                ", migrationStrategy=" + migrationStrategy +
                 ", quantumRisk=" + quantumRisk +
                 ", confidence=" + confidence +
                 ", considerations=" + considerations +

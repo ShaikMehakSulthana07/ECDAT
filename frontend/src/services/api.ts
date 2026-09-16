@@ -1,4 +1,4 @@
-import type { AnalysisResponse, ErrorResponse } from '../types/analysis';
+import type { AnalysisResponse, ErrorResponse, ProjectAnalysisContext } from '../types/analysis';
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
 
@@ -61,15 +61,16 @@ export const apiService = {
     }
   },
 
-  async analyzeDirectory(path: string): Promise<AnalysisResponse> {
+  async analyzeDirectory(path: string, context?: ProjectAnalysisContext): Promise<AnalysisResponse> {
     try {
+      const requestBody = context ? { path, context } : { path };
       const response = await fetch(`${BASE_URL}/api/analyze`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Accept: 'application/json',
         },
-        body: JSON.stringify({ path }),
+        body: JSON.stringify(requestBody),
       });
       return await handleResponse<AnalysisResponse>(response);
     } catch (err: unknown) {
@@ -84,10 +85,19 @@ export const apiService = {
     }
   },
 
-  async analyzeArchive(file: File): Promise<AnalysisResponse> {
+  async analyzeArchive(file: File, context?: ProjectAnalysisContext): Promise<AnalysisResponse> {
     try {
       const formData = new FormData();
       formData.append('file', file);
+      
+      if (context) {
+        if (context.applicationName) formData.append('applicationName', context.applicationName);
+        if (context.businessCriticality) formData.append('businessCriticality', context.businessCriticality);
+        if (context.dataSensitivity) formData.append('dataSensitivity', context.dataSensitivity);
+        if (context.dataLifetimeYears) formData.append('dataLifetimeYears', context.dataLifetimeYears.toString());
+        if (context.migrationTimeYears) formData.append('migrationTimeYears', context.migrationTimeYears.toString());
+        if (context.threatHorizonYears) formData.append('threatHorizonYears', context.threatHorizonYears.toString());
+      }
 
       const response = await fetch(`${BASE_URL}/api/analyze/upload`, {
         method: 'POST',

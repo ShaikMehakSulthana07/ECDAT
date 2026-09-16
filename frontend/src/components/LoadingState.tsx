@@ -33,7 +33,7 @@ export const LoadingState: React.FC<LoadingStateProps> = ({ target }) => {
         <div className="step-connector-v"></div>
         <div className="step-item active">
           <span className="step-dot"></span>
-          <span>4. Generating CycloneDX 1.6 CBOM</span>
+          <span>4. Generating CycloneDX-inspired CBOM</span>
         </div>
       </div>
     </div>

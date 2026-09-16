@@ -1,8 +1,9 @@
 package com.ecdat.backend.inventory;
 
 public enum DataSensitivity {
-    HIGH,
-    MEDIUM,
-    LOW,
+    HIGHLY_SENSITIVE,
+    CONFIDENTIAL,
+    INTERNAL,
+    PUBLIC,
     UNKNOWN
 }

@@ -4,6 +4,7 @@ import com.ecdat.backend.cbom.CBOMDocument;
 import com.ecdat.backend.cbom.CBOMGenerator;
 import com.ecdat.backend.dto.AnalysisResponse;
 import com.ecdat.backend.dto.AnalysisSummary;
+import com.ecdat.backend.dto.ProjectAnalysisContext;
 import com.ecdat.backend.inventory.CryptoAsset;
 import com.ecdat.backend.inventory.CryptoInventory;
 import com.ecdat.backend.inventory.CryptoUsageCategory;
@@ -16,8 +17,15 @@ import com.ecdat.backend.risk.QuantumRisk;
 import com.ecdat.backend.risk.RiskAssessment;
 import com.ecdat.backend.risk.RiskEngine;
 import com.ecdat.backend.risk.RiskLevel;
+import com.ecdat.backend.risk.quantum.QuantumRiskEngine;
+import com.ecdat.backend.risk.quantum.QuantumRiskInput;
+import com.ecdat.backend.risk.quantum.QuantumRiskResult;
+import com.ecdat.backend.scanner.CertificateArtifactScanner;
+import com.ecdat.backend.scanner.MavenDependencyScanner;
+import com.ecdat.backend.scanner.certificate.CertificateArtifactFinding;
 import com.ecdat.backend.scanner.CryptoFinding;
 import com.ecdat.backend.scanner.JavaSourceScanner;
+import com.ecdat.backend.scanner.maven.MavenDependencyFinding;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -41,6 +49,9 @@ public class AnalysisService {
     private final RiskEngine riskEngine;
     private final PQCRecommendationEngine pqcEngine;
     private final CBOMGenerator cbomGenerator;
+    private final QuantumRiskEngine quantumRiskEngine;
+    private final MavenDependencyScanner mavenDependencyScanner;
+    private final CertificateArtifactScanner certificateArtifactScanner;
 
     public AnalysisService() {
         this.scanner = new JavaSourceScanner();
@@ -48,34 +59,48 @@ public class AnalysisService {
         this.riskEngine = new RiskEngine();
         this.pqcEngine = new PQCRecommendationEngine();
         this.cbomGenerator = new CBOMGenerator();
+        this.quantumRiskEngine = new QuantumRiskEngine();
+        this.mavenDependencyScanner = new MavenDependencyScanner();
+        this.certificateArtifactScanner = new CertificateArtifactScanner();
     }
 
     public AnalysisService(JavaSourceScanner scanner, RiskEngine riskEngine,
-                           PQCRecommendationEngine pqcEngine, CBOMGenerator cbomGenerator) {
+                           PQCRecommendationEngine pqcEngine, CBOMGenerator cbomGenerator,
+                           QuantumRiskEngine quantumRiskEngine, MavenDependencyScanner mavenDependencyScanner,
+                           CertificateArtifactScanner certificateArtifactScanner) {
         this.scanner = scanner;
         this.inventoryClassifier = new InventoryClassifier();
         this.riskEngine = riskEngine;
         this.pqcEngine = pqcEngine;
         this.cbomGenerator = cbomGenerator;
+        this.quantumRiskEngine = quantumRiskEngine;
+        this.mavenDependencyScanner = mavenDependencyScanner;
+        this.certificateArtifactScanner = certificateArtifactScanner;
     }
 
     public AnalysisService(JavaSourceScanner scanner, InventoryClassifier inventoryClassifier,
                            RiskEngine riskEngine, PQCRecommendationEngine pqcEngine,
-                           CBOMGenerator cbomGenerator) {
+                           CBOMGenerator cbomGenerator, QuantumRiskEngine quantumRiskEngine,
+                           MavenDependencyScanner mavenDependencyScanner,
+                           CertificateArtifactScanner certificateArtifactScanner) {
         this.scanner = scanner;
         this.inventoryClassifier = inventoryClassifier;
         this.riskEngine = riskEngine;
         this.pqcEngine = pqcEngine;
         this.cbomGenerator = cbomGenerator;
+        this.quantumRiskEngine = quantumRiskEngine;
+        this.mavenDependencyScanner = mavenDependencyScanner;
+        this.certificateArtifactScanner = certificateArtifactScanner;
     }
 
     /**
      * Executes the end-to-end cryptographic analysis pipeline on a target source directory.
      *
      * @param sourcePath directory path containing source files
+     * @param context project analysis context for quantum risk assessment
      * @return integrated AnalysisResponse containing findings, risk assessments, PQC recommendations, inventory, and CBOM
      */
-    public AnalysisResponse analyzeDirectory(String sourcePath) {
+    public AnalysisResponse analyzeDirectory(String sourcePath, ProjectAnalysisContext context) {
         if (sourcePath == null || sourcePath.trim().isEmpty()) {
             throw new IllegalArgumentException("Source path must not be empty or blank.");
         }
@@ -94,16 +119,22 @@ public class AnalysisService {
             throw new IllegalArgumentException("Source directory is not readable: " + sourcePath);
         }
 
-        return executePipeline(path.toString(), sourcePath);
+        // Use default context if not provided
+        if (context == null) {
+            context = new ProjectAnalysisContext();
+        }
+
+        return executePipeline(path.toString(), sourcePath, context);
     }
 
     /**
      * Extracts an uploaded zip archive safely and executes the cryptographic analysis pipeline.
      *
      * @param file uploaded zip archive
+     * @param context project analysis context for quantum risk assessment
      * @return integrated AnalysisResponse
      */
-    public AnalysisResponse analyzeArchive(MultipartFile file) {
+    public AnalysisResponse analyzeArchive(MultipartFile file, ProjectAnalysisContext context) {
         if (file == null || file.isEmpty()) {
             throw new IllegalArgumentException("Uploaded archive file is empty or missing.");
         }
@@ -113,11 +144,16 @@ public class AnalysisService {
             throw new IllegalArgumentException("Only .zip archive files are supported for upload.");
         }
 
+        // Use default context if not provided
+        if (context == null) {
+            context = new ProjectAnalysisContext();
+        }
+
         Path tempDir = null;
         try {
             tempDir = Files.createTempDirectory("ecdat-upload-");
             extractZipSafely(file, tempDir);
-            return executePipeline(tempDir.toString(), originalFilename);
+            return executePipeline(tempDir.toString(), originalFilename, context);
         } catch (IOException e) {
             throw new RuntimeException("Failed to process uploaded archive: " + e.getMessage(), e);
         } finally {
@@ -130,12 +166,24 @@ public class AnalysisService {
     /**
      * Orchestrates the integrated multi-phase analysis pipeline across modules.
      */
-    private AnalysisResponse executePipeline(String scanDirectory, String displayPath) {
+    private AnalysisResponse executePipeline(String scanDirectory, String displayPath, ProjectAnalysisContext context) {
         // Phase 1 — Crypto Discovery
         List<CryptoFinding> findings = scanner.scanDirectory(scanDirectory);
         if (findings == null) {
             findings = new ArrayList<>();
         }
+
+        // Phase 1.5 — Maven Dependency Analysis
+        List<MavenDependencyFinding> dependencyFindings = mavenDependencyScanner.scanDirectory(scanDirectory);
+        
+        // Enrich source code findings with library information from dependencies
+        enrichFindingsWithLibraryInfo(findings, dependencyFindings);
+
+        // Phase 1.6 — Certificate/Key Artifact Discovery
+        List<CertificateArtifactFinding> certificateFindings = certificateArtifactScanner.scanDirectory(scanDirectory);
+
+        // Apply business context to findings
+        applyContextToFindings(findings, context);
 
         // Phase 7 Layer — Inventory Classification
         List<CryptoAsset> cryptoAssets = inventoryClassifier.classifyAll(findings);
@@ -145,6 +193,19 @@ public class AnalysisService {
         for (CryptoFinding finding : findings) {
             RiskAssessment assessment = riskEngine.assessRisk(finding);
             riskAssessments.add(assessment);
+        }
+
+        // Phase 2.5 — Quantum Risk Assessment (Mosca-style)
+        List<QuantumRiskResult> quantumRiskResults = new ArrayList<>();
+        for (int i = 0; i < findings.size(); i++) {
+            CryptoFinding finding = findings.get(i);
+            QuantumRiskInput quantumInput = createQuantumRiskInput(finding, context);
+            QuantumRiskResult quantumResult = quantumRiskEngine.assessQuantumRisk(quantumInput);
+            quantumRiskResults.add(quantumResult);
+            // Attach quantum risk result to the corresponding risk assessment
+            if (i < riskAssessments.size()) {
+                riskAssessments.get(i).setQuantumRiskResult(quantumResult);
+            }
         }
 
         // Phase 3 — PQC Recommendations
@@ -165,7 +226,7 @@ public class AnalysisService {
         // Summary Aggregation
         AnalysisSummary summary = buildSummary(findings, cryptoAssets, riskAssessments, pqcRecommendations);
 
-        return new AnalysisResponse(
+        AnalysisResponse response = new AnalysisResponse(
                 "SUCCESS",
                 displayPath,
                 findings,
@@ -175,7 +236,9 @@ public class AnalysisService {
                 inventory,
                 cbom,
                 summary
-        );
+        ).withContext(context);
+        response.setCertificateFindings(certificateFindings);
+        return response;
     }
 
     /**
@@ -200,21 +263,26 @@ public class AnalysisService {
                     throw new SecurityException("Zip Slip path traversal attempt detected in entry: " + entry.getName());
                 }
 
-                if (entry.isDirectory()) {
-                    Files.createDirectories(entryDestination);
-                } else {
-                    if (entryDestination.getParent() != null) {
-                        Files.createDirectories(entryDestination.getParent());
+                if (entry.isDirectory() || entry.getName().endsWith("/") || entry.getName().endsWith("\\")) {
+                    if (!Files.exists(entryDestination)) {
+                        Files.createDirectories(entryDestination);
                     }
-                    try (OutputStream os = Files.newOutputStream(entryDestination)) {
-                        byte[] buffer = new byte[8192];
-                        int len;
-                        while ((len = zis.read(buffer)) > 0) {
-                            totalBytes += len;
-                            if (totalBytes > MAX_TOTAL_SIZE) {
-                                throw new SecurityException("Archive uncompressed size exceeds maximum allowed limit (200MB).");
+                } else {
+                    Path parent = entryDestination.getParent();
+                    if (parent != null && !Files.exists(parent)) {
+                        Files.createDirectories(parent);
+                    }
+                    if (!Files.isDirectory(entryDestination)) {
+                        try (OutputStream os = Files.newOutputStream(entryDestination)) {
+                            byte[] buffer = new byte[8192];
+                            int len;
+                            while ((len = zis.read(buffer)) > 0) {
+                                totalBytes += len;
+                                if (totalBytes > MAX_TOTAL_SIZE) {
+                                    throw new SecurityException("Archive uncompressed size exceeds maximum allowed limit (200MB).");
+                                }
+                                os.write(buffer, 0, len);
                             }
-                            os.write(buffer, 0, len);
                         }
                     }
                 }
@@ -238,6 +306,67 @@ public class AnalysisService {
         } catch (Exception ignored) {
             // Best effort cleanup for temporary files
         }
+    }
+
+    /**
+     * Enriches source code findings with library information from Maven dependencies.
+     */
+    private void enrichFindingsWithLibraryInfo(List<CryptoFinding> findings, List<MavenDependencyFinding> dependencyFindings) {
+        if (dependencyFindings == null || dependencyFindings.isEmpty()) {
+            return;
+        }
+
+        // Create a map of crypto library names for quick lookup
+        for (CryptoFinding finding : findings) {
+            if (finding.getLibrary() == null || finding.getLibrary().isEmpty()) {
+                // Try to match with known crypto libraries from dependencies
+                for (MavenDependencyFinding depFinding : dependencyFindings) {
+                    if (depFinding.isCryptoRelated() && depFinding.getCryptoLibraryName() != null) {
+                        // Associate the finding with the crypto library
+                        // This is a heuristic - in a real implementation, you'd need more sophisticated matching
+                        finding.setLibrary(depFinding.getCryptoLibraryName());
+                        finding.setSourceType("JAVA_AST_MAVEN");
+                        break;
+                    }
+                }
+                
+                // If no match found, mark as unknown
+                if (finding.getLibrary() == null || finding.getLibrary().isEmpty()) {
+                    finding.setLibrary("UNKNOWN");
+                }
+            }
+        }
+    }
+
+    /**
+     * Applies project-level context to crypto findings.
+     */
+    private void applyContextToFindings(List<CryptoFinding> findings, ProjectAnalysisContext context) {
+        if (context == null) {
+            return;
+        }
+        
+        for (CryptoFinding finding : findings) {
+            // Always apply context values if context is provided
+            finding.setBusinessCriticality(context.getBusinessCriticality());
+            finding.setDataSensitivity(context.getDataSensitivity());
+        }
+    }
+
+    /**
+     * Creates quantum risk input from a crypto finding and project context.
+     */
+    private QuantumRiskInput createQuantumRiskInput(CryptoFinding finding, ProjectAnalysisContext context) {
+        QuantumRiskInput input = new QuantumRiskInput();
+        input.setAlgorithm(finding.getAlgorithm());
+        input.setKeySize(finding.getKeySize());
+        input.setCryptographicPurpose(finding.getPurpose() != null ? finding.getPurpose().name() : "UNKNOWN");
+        input.setDataLifetimeYears(context.getDataLifetimeYears());
+        input.setMigrationTimeYears(context.getMigrationTimeYears());
+        input.setThreatHorizonYears(context.getThreatHorizonYears());
+        input.setBusinessCriticality(context.getBusinessCriticality());
+        input.setDataSensitivity(context.getDataSensitivity());
+        return input;
     }
 
     /**
