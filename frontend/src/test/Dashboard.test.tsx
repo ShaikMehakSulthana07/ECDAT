@@ -182,16 +182,16 @@ describe('ECDAT Enterprise Frontend Redesign Tests', () => {
     localStorage.clear();
   });
 
-  it('1. Phase 1: Renders LoginScreen with enterprise authentication elements', () => {
+  it('1. Phase 1: Renders LoginScreen with local workspace session elements', () => {
     const handleLogin = vi.fn();
     render(<LoginScreen onLogin={handleLogin} />);
     expect(screen.getByText('ECDAT')).toBeInTheDocument();
     expect(screen.getByText(/Enterprise Cryptographic Discovery & Analysis/i)).toBeInTheDocument();
-    expect(screen.getByText(/Sign in to your security workspace/i)).toBeInTheDocument();
+    expect(screen.getByText(/Sign in to access your local analysis workspace/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/Work Email/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/Password/i)).toBeInTheDocument();
-    expect(screen.getByText(/Authorized access only/i)).toBeInTheDocument();
-    expect(screen.getByText(/Continue with SSO/i)).toBeInTheDocument();
+    expect(screen.getByText(/Local analysis session/i)).toBeInTheDocument();
+    expect(screen.getByText(/Continue with SSO \(Not Configured\)/i)).toBeInTheDocument();
 
     const signInBtn = screen.getByRole('button', { name: /Sign In/i });
     fireEvent.click(signInBtn);
@@ -394,7 +394,9 @@ describe('ECDAT Enterprise Frontend Redesign Tests', () => {
       />
     );
     expect(screen.getByText(/Platform & Analysis Settings/i)).toBeInTheDocument();
+    expect(screen.getByText(/Application Session Profile/i)).toBeInTheDocument();
     expect(screen.getByText('Security Analyst')).toBeInTheDocument();
+    expect(screen.getByText(/Local Analysis Session/i)).toBeInTheDocument();
     expect(screen.getByText(/ONLINE \(HEALTHY\)/i)).toBeInTheDocument();
   });
 

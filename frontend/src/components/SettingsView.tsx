@@ -27,26 +27,26 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         {/* Profile Card */}
         <div className="card-panel">
           <h3 className="card-panel-title" style={{ marginBottom: '16px' }}>
-            User Profile &amp; Organization
+            Application Session Profile
           </h3>
           <table className="props-table">
             <tbody>
               <tr>
-                <th>Full Name</th>
+                <th>Session Operator</th>
                 <td className="font-bold">{user.name}</td>
               </tr>
               <tr>
-                <th>Work Email</th>
+                <th>Contact Email</th>
                 <td>{user.email}</td>
               </tr>
               <tr>
-                <th>Security Organization</th>
+                <th>Organization</th>
                 <td>{user.org}</td>
               </tr>
               <tr>
-                <th>Access Level</th>
+                <th>Session Environment</th>
                 <td>
-                  <span className="tag-subtle font-mono">ROLE_SECURITY_ANALYST</span>
+                  <span className="tag-subtle font-mono">Local Analysis Session</span>
                 </td>
               </tr>
             </tbody>

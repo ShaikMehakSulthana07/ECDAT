@@ -61,7 +61,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               className={`nav-link ${activeTab === 'cbom' ? 'active' : ''}`}
               onClick={() => setActiveTab('cbom')}
             >
-              CycloneDX CBOM
+              CBOM (CycloneDX-Inspired)
             </button>
             <button
               className={`nav-link ${activeTab === 'traceability' ? 'active' : ''}`}

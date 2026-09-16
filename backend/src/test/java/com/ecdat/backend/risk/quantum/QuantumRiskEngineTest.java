@@ -164,4 +164,25 @@ class QuantumRiskEngineTest {
         assertFalse(result.isMigrationRequired());
         assertEquals(MigrationUrgency.NONE, result.getMigrationUrgency());
     }
+
+    @Test
+    void testMoscaBoundaryCondition_StrictInequality() {
+        // Boundary case: Migration Time (5) + Data Lifetime (5) = 10, Threat Horizon = 10
+        // 10 > 10 is FALSE (strict greater-than)
+        QuantumRiskInput input = new QuantumRiskInput();
+        input.setAlgorithm("RSA");
+        input.setMigrationTimeYears(5);
+        input.setDataLifetimeYears(5);
+        input.setThreatHorizonYears(10);
+        input.setBusinessCriticality(BusinessCriticality.MEDIUM);
+        input.setDataSensitivity(DataSensitivity.CONFIDENTIAL);
+
+        QuantumRiskResult result = engine.assessQuantumRisk(input);
+
+        assertTrue(result.isQuantumVulnerable());
+        assertFalse(result.isMoscaConditionMet());
+        assertFalse(result.isMigrationRequired());
+        assertEquals(10, result.getTotalExposureYears()); // 5 + 5
+        assertEquals(10, result.getThreatHorizonYears());
+    }
 }

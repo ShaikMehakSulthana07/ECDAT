@@ -37,7 +37,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
           <h1 className="auth-title">ECDAT</h1>
           <div className="auth-subtitle-brand">Enterprise Cryptographic Discovery &amp; Analysis</div>
           <div className="auth-welcome">Welcome back</div>
-          <p className="auth-instructions">Sign in to your security workspace.</p>
+          <p className="auth-instructions">Sign in to access your local analysis workspace.</p>
         </div>
 
         <form onSubmit={handleSubmit} className="auth-form">
@@ -82,7 +82,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
             <button
               type="button"
               className="btn-link"
-              onClick={() => alert('Password reset requests must be initiated through your corporate IT service desk.')}
+              onClick={() => alert('Password reset is not configured for local application sessions.')}
               style={{ fontSize: '12px', color: 'var(--text-secondary)' }}
             >
               Forgot password?
@@ -98,16 +98,16 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
             Sign In
           </button>
 
-          <div className="sso-divider">Enterprise Authentication</div>
+          <div className="sso-divider">Single Sign-On (Not Configured)</div>
 
-          <div className="btn-sso-disabled" title="SSO must be provisioned via corporate IdP">
-            <span>Continue with SSO</span>
-            <span className="sso-subtext">Enterprise SAML 2.0 / OIDC Identity Provider</span>
+          <div className="btn-sso-disabled" title="Single Sign-On is not configured in this environment">
+            <span>Continue with SSO (Not Configured)</span>
+            <span className="sso-subtext">Enterprise SAML 2.0 / OIDC (Unavailable)</span>
           </div>
         </form>
 
         <div className="auth-footer">
-          <span className="auth-footer-notice">Authorized access only</span>
+          <span className="auth-footer-notice">Local analysis session</span>
           <span>ECDAT • Cryptographic Security Platform</span>
         </div>
       </div>
