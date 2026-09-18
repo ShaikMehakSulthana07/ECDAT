@@ -1,252 +1,284 @@
-import React, { useState, useMemo } from 'react';
+import React from 'react';
 import type { CryptoFinding, RiskAssessment, PQCRecommendation } from '../types/analysis';
 
 interface PQCMigrationViewProps {
   findings: CryptoFinding[];
-  riskAssessments: RiskAssessment[];
+  riskAssessments?: RiskAssessment[];
   pqcRecommendations: PQCRecommendation[];
   onSelectFinding: (index: number) => void;
 }
 
+// Helper to convert ALL_CAPS_SNAKE to readable Title Case
+const formatTitleCase = (str: string): string => {
+  if (!str) return '';
+  return str
+    .toLowerCase()
+    .split('_')
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+};
+
 export const PQCMigrationView: React.FC<PQCMigrationViewProps> = ({
-  findings,
-  riskAssessments,
   pqcRecommendations,
   onSelectFinding,
 }) => {
-  const [statusFilter, setStatusFilter] = useState<string>('ALL');
-  const [priorityFilter, setPriorityFilter] = useState<string>('ALL');
-  const [strategyFilter, setStrategyFilter] = useState<string>('ALL');
+  const total = pqcRecommendations.length;
 
-  const items = useMemo(() => {
-    return pqcRecommendations.map((rec, idx) => ({
-      index: idx,
-      rec,
-      finding: findings[idx],
-      risk: riskAssessments[idx],
-    }));
-  }, [pqcRecommendations, findings, riskAssessments]);
+  // Dimension 1: Mutually Exclusive PQC Target Standard Categories
+  const mlDsaCount = pqcRecommendations.filter(
+    (r) => r.recommendedAlgorithm?.includes('ML-DSA') || r.recommendedAlgorithm?.includes('SLH-DSA')
+  ).length;
+  const mlKemCount = pqcRecommendations.filter(
+    (r) => r.recommendedAlgorithm?.includes('ML-KEM')
+  ).length;
+  const needsAnalysisTargetCount = Math.max(0, total - (mlDsaCount + mlKemCount));
 
-  const filteredItems = useMemo(() => {
-    return items.filter(({ rec }) => {
-      if (statusFilter !== 'ALL' && rec.recommendationStatus !== statusFilter) {
-        return false;
-      }
-      if (priorityFilter !== 'ALL' && rec.migrationPriority !== priorityFilter) {
-        return false;
-      }
-      if (strategyFilter !== 'ALL' && (rec.migrationStrategy || 'DIRECT_PQC') !== strategyFilter) {
-        return false;
-      }
-      return true;
-    });
-  }, [items, statusFilter, priorityFilter, strategyFilter]);
+  // Target Standard Percentages (Guaranteed exact 100% sum when total > 0)
+  const mlDsaPct = total > 0 ? Math.round((mlDsaCount / total) * 100) : 0;
+  const mlKemPct = total > 0 ? Math.round((mlKemCount / total) * 100) : 0;
+  const needsAnalysisPct = total > 0 ? Math.max(0, 100 - (mlDsaPct + mlKemPct)) : 0;
+
+  // Dimension 2: Migration Strategy Breakdown (Separated from target standard)
+  const hybridCount = pqcRecommendations.filter((r) => r.migrationStrategy === 'HYBRID').length;
+  const directPqcCount = pqcRecommendations.filter((r) => r.migrationStrategy === 'DIRECT_PQC').length;
+  const needsAnalysisStratCount = pqcRecommendations.filter(
+    (r) => r.migrationStrategy === 'NEEDS_ANALYSIS' || (!r.migrationStrategy && !r.recommendedAlgorithm)
+  ).length;
+  const noActionCount = pqcRecommendations.filter((r) => r.migrationStrategy === 'NO_ACTION').length;
+
+  // Migration Priorities
+  const highPriorityCount = pqcRecommendations.filter(
+    (r) => r.migrationPriority === 'HIGH' || r.migrationPriority === 'CRITICAL'
+  ).length;
+  const medPriorityCount = pqcRecommendations.filter((r) => r.migrationPriority === 'MEDIUM').length;
+  const lowPriorityCount = pqcRecommendations.filter((r) => r.migrationPriority === 'LOW').length;
 
   return (
     <div>
+      {/* Header matching Screen 8 */}
       <div className="view-header">
         <div className="view-title-group">
-          <h1 className="view-title">Post-Quantum Cryptography (PQC) Migration</h1>
-          <p className="view-subtitle">
-            Target cryptographic primitives mapped to standardized NIST Post-Quantum Cryptography algorithms (FIPS 203, 204, 205).
-          </p>
+          <h1 className="view-title">PQC Migration Strategy</h1>
+          <p className="view-subtitle">Recommended post-quantum cryptography algorithms and migration paths</p>
         </div>
       </div>
 
-      {/* NIST Standards Reference Banner */}
-      <div className="card-panel" style={{ borderLeft: '4px solid var(--pqc-accent)' }}>
+      {/* Top Row: Target Standard Distribution & Migration Strategy Breakdown */}
+      <div className="dashboard-charts-grid">
+        {/* Left Card: Target Distribution Horizontal Bars (Mutually Exclusive Targets Only) */}
+        <div className="chart-card">
+          <div className="chart-card-header">
+            <div>
+              <h3 className="chart-card-title">Target Standard Distribution</h3>
+              <span className="chart-card-sub">Post-quantum target mapping breakdown</span>
+            </div>
+            <span className="tag-subtle font-mono">{total} Total Recommendations</span>
+          </div>
+
+          <div className="pqc-standard-distribution-list">
+            {/* ML-DSA (FIPS 204) */}
+            <div className="pqc-dist-item">
+              <div className="pqc-dist-header">
+                <div className="pqc-dist-label-wrap">
+                  <span className="legend-dot critical"></span>
+                  <span className="pqc-dist-name">ML-DSA (FIPS 204)</span>
+                  <span className="pqc-dist-tag">Digital Signatures</span>
+                </div>
+                <div className="pqc-dist-values font-mono">
+                  <span className="pqc-dist-count">{mlDsaCount}</span>
+                  <span className="pqc-dist-pct">{mlDsaPct}%</span>
+                </div>
+              </div>
+              <div className="pqc-dist-track">
+                <div
+                  className="pqc-dist-fill dsa"
+                  style={{ width: `${mlDsaPct}%` }}
+                  title={`ML-DSA: ${mlDsaCount} (${mlDsaPct}%)`}
+                ></div>
+              </div>
+            </div>
+
+            {/* ML-KEM (FIPS 203) */}
+            <div className="pqc-dist-item">
+              <div className="pqc-dist-header">
+                <div className="pqc-dist-label-wrap">
+                  <span className="legend-dot high"></span>
+                  <span className="pqc-dist-name">ML-KEM (FIPS 203)</span>
+                  <span className="pqc-dist-tag">Key Encapsulation</span>
+                </div>
+                <div className="pqc-dist-values font-mono">
+                  <span className="pqc-dist-count">{mlKemCount}</span>
+                  <span className="pqc-dist-pct">{mlKemPct}%</span>
+                </div>
+              </div>
+              <div className="pqc-dist-track">
+                <div
+                  className="pqc-dist-fill kem"
+                  style={{ width: `${mlKemPct}%` }}
+                  title={`ML-KEM: ${mlKemCount} (${mlKemPct}%)`}
+                ></div>
+              </div>
+            </div>
+
+            {/* Needs Analysis */}
+            <div className="pqc-dist-item">
+              <div className="pqc-dist-header">
+                <div className="pqc-dist-label-wrap">
+                  <span className="legend-dot medium"></span>
+                  <span className="pqc-dist-name">Needs Analysis</span>
+                  <span className="pqc-dist-tag">Context-Dependent</span>
+                </div>
+                <div className="pqc-dist-values font-mono">
+                  <span className="pqc-dist-count">{needsAnalysisTargetCount}</span>
+                  <span className="pqc-dist-pct">{needsAnalysisPct}%</span>
+                </div>
+              </div>
+              <div className="pqc-dist-track">
+                <div
+                  className="pqc-dist-fill na"
+                  style={{ width: `${needsAnalysisPct}%` }}
+                  title={`Needs Analysis: ${needsAnalysisTargetCount} (${needsAnalysisPct}%)`}
+                ></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Right Card: Migration Strategy & Urgency Breakdown */}
+        <div className="chart-card">
+          <div className="chart-card-header">
+            <div>
+              <h3 className="chart-card-title">Migration Strategy &amp; Urgency</h3>
+              <span className="chart-card-sub">Transition approach and execution priority</span>
+            </div>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', marginTop: '12px' }}>
+            {/* Strategy Tiles */}
+            <div>
+              <div className="matrix-breakdown-title" style={{ marginBottom: '8px' }}>Migration Strategy Breakdown</div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
+                <div style={{ padding: '14px 10px', background: 'var(--bg-surface-subtle)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-subtle)', textAlign: 'center' }}>
+                  <span className="tag-subtle" style={{ color: 'var(--pqc-accent)', borderColor: 'var(--pqc-accent-border)' }}>Hybrid Transition</span>
+                  <div className="font-bold font-mono" style={{ fontSize: '22px', color: 'var(--text-primary)', marginTop: '6px' }}>
+                    {hybridCount}
+                  </div>
+                  <span style={{ fontSize: '10.5px', color: 'var(--text-muted)' }}>Dual / Composite Mode</span>
+                </div>
+
+                <div style={{ padding: '14px 10px', background: 'var(--bg-surface-subtle)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-subtle)', textAlign: 'center' }}>
+                  <span className="tag-subtle" style={{ color: 'var(--primary)', borderColor: 'var(--primary-border)' }}>Direct PQC</span>
+                  <div className="font-bold font-mono" style={{ fontSize: '22px', color: 'var(--text-primary)', marginTop: '6px' }}>
+                    {directPqcCount}
+                  </div>
+                  <span style={{ fontSize: '10.5px', color: 'var(--text-muted)' }}>Direct Standard Swap</span>
+                </div>
+
+                <div style={{ padding: '14px 10px', background: 'var(--bg-surface-subtle)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-subtle)', textAlign: 'center' }}>
+                  <span className="tag-subtle" style={{ color: 'var(--text-secondary)' }}>Needs Analysis</span>
+                  <div className="font-bold font-mono" style={{ fontSize: '22px', color: 'var(--text-primary)', marginTop: '6px' }}>
+                    {needsAnalysisStratCount + noActionCount}
+                  </div>
+                  <span style={{ fontSize: '10.5px', color: 'var(--text-muted)' }}>Context / Retention</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Migration Urgency Row */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', background: 'var(--bg-surface-subtle)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-subtle)' }}>
+              <span style={{ fontSize: '11.5px', fontWeight: 600, color: 'var(--text-secondary)' }}>Migration Urgency:</span>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <span className="risk-badge critical">{highPriorityCount} High</span>
+                <span className="risk-badge medium">{medPriorityCount} Medium</span>
+                <span className="risk-badge low">{lowPriorityCount} Low</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Bottom Table: Top Recommendations */}
+      <div className="card-panel" style={{ marginTop: '20px' }}>
         <div className="card-panel-header">
           <div>
-            <h3 className="card-panel-title">NIST Post-Quantum Cryptography Standards Alignment</h3>
-            <span className="card-panel-sub">
-              Deterministic mappings distinguishing digital signatures (ML-DSA), key encapsulation (ML-KEM), and stateless hash signatures (SLH-DSA).
-            </span>
+            <h3 className="card-panel-title">Top Recommendations</h3>
+            <span className="card-panel-sub">Post-quantum cryptography mappings and transition strategies</span>
           </div>
-        </div>
-
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '14px' }}>
-          <div style={{ padding: '12px', background: 'var(--bg-surface-subtle)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-sm)' }}>
-            <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--pqc-accent)', textTransform: 'uppercase' }}>
-              FIPS 203 · ML-KEM
-            </div>
-            <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', marginTop: '2px' }}>
-              Module-Lattice Key Encapsulation
-            </div>
-            <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
-              Target for ECDH, DH, and asymmetric key establishment.
-            </div>
-          </div>
-
-          <div style={{ padding: '12px', background: 'var(--bg-surface-subtle)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-sm)' }}>
-            <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--pqc-accent)', textTransform: 'uppercase' }}>
-              FIPS 204 · ML-DSA
-            </div>
-            <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', marginTop: '2px' }}>
-              Module-Lattice Digital Signatures
-            </div>
-            <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
-              Target for RSA signatures, ECDSA, and certificate signing.
-            </div>
-          </div>
-
-          <div style={{ padding: '12px', background: 'var(--bg-surface-subtle)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-sm)' }}>
-            <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--pqc-accent)', textTransform: 'uppercase' }}>
-              FIPS 205 · SLH-DSA
-            </div>
-            <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', marginTop: '2px' }}>
-              Stateless Hash-Based Signatures
-            </div>
-            <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
-              Alternative signature standard with zero lattice assumptions.
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Migration Table & Filters */}
-      <div className="card-panel">
-        <div className="filter-toolbar">
-          <div className="filter-controls-group">
-            <select
-              className="filter-select"
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-            >
-              <option value="ALL">All Recommendation Statuses</option>
-              <option value="RECOMMENDED">Recommended (Action Required)</option>
-              <option value="CONDITIONAL">Conditional</option>
-              <option value="NEEDS_ANALYSIS">Needs Analysis</option>
-              <option value="NOT_REQUIRED">Not Required</option>
-            </select>
-
-            <select
-              className="filter-select"
-              value={priorityFilter}
-              onChange={(e) => setPriorityFilter(e.target.value)}
-            >
-              <option value="ALL">All Priorities</option>
-              <option value="CRITICAL">Critical Priority</option>
-              <option value="HIGH">High Priority</option>
-              <option value="MEDIUM">Medium Priority</option>
-              <option value="LOW">Low Priority</option>
-            </select>
-
-            <select
-              className="filter-select"
-              value={strategyFilter}
-              onChange={(e) => setStrategyFilter(e.target.value)}
-            >
-              <option value="ALL">All Migration Strategies</option>
-              <option value="DIRECT_PQC">Direct PQC</option>
-              <option value="HYBRID">Hybrid Transition</option>
-              <option value="NEEDS_ANALYSIS">Needs Analysis</option>
-              <option value="NO_ACTION">No Action</option>
-            </select>
-          </div>
-
-          {(statusFilter !== 'ALL' || priorityFilter !== 'ALL' || strategyFilter !== 'ALL') && (
-            <button
-              className="btn-secondary btn-sm"
-              onClick={() => {
-                setStatusFilter('ALL');
-                setPriorityFilter('ALL');
-                setStrategyFilter('ALL');
-              }}
-            >
-              Reset Filters
-            </button>
-          )}
         </div>
 
         <div className="table-container">
-          <table className="enterprise-table">
+          <table className="enterprise-table pqc-recommendations-table">
             <thead>
               <tr>
-                <th>Current Algorithm</th>
-                <th>Declared Purpose</th>
-                <th>Risk Tier</th>
-                <th>Recommended PQC Target</th>
-                <th>Migration Strategy</th>
-                <th>Priority</th>
-                <th>Recommendation Status</th>
-                <th>Source Location</th>
-                <th>Action</th>
+                <th style={{ width: '18%' }}>Algorithm</th>
+                <th style={{ width: '22%' }}>Current Use</th>
+                <th style={{ width: '24%' }}>Recommended</th>
+                <th style={{ width: '18%' }}>Strategy</th>
+                <th style={{ width: '10%' }}>Priority</th>
+                <th style={{ width: '8%', textAlign: 'right' }}>Action</th>
               </tr>
             </thead>
             <tbody>
-              {filteredItems.length === 0 ? (
-                <tr>
-                  <td colSpan={9} style={{ textAlign: 'center', padding: '32px', color: 'var(--text-muted)' }}>
-                    No PQC recommendations match the selected filters.
-                  </td>
-                </tr>
-              ) : (
-                filteredItems.map(({ index, rec, finding, risk }) => {
-                  const riskLevel = risk?.riskLevel || 'LOW';
-                  const strategy = rec.migrationStrategy || (rec.recommendedAlgorithm ? 'DIRECT_PQC' : 'NEEDS_ANALYSIS');
+              {pqcRecommendations.map((rec, idx) => {
+                const rawStrategy = rec.migrationStrategy || (rec.recommendedAlgorithm ? 'DIRECT_PQC' : 'NEEDS_ANALYSIS');
+                const strategyDisplay = formatTitleCase(rawStrategy);
+                const purposeDisplay = formatTitleCase(rec.currentPurpose);
 
-                  return (
-                    <tr
-                      key={index}
-                      className="clickable-row"
-                      onClick={() => onSelectFinding(index)}
-                    >
-                      <td>
-                        <span className="algo-text">{rec.currentAlgorithm}</span>
-                      </td>
-                      <td>
-                        <span className="tag-subtle">{rec.currentPurpose}</span>
-                      </td>
-                      <td>
-                        <span className={`risk-badge ${riskLevel.toLowerCase()}`}>
-                          {riskLevel}
-                        </span>
-                      </td>
-                      <td>
-                        {rec.recommendedAlgorithm ? (
-                          <strong className="font-mono" style={{ color: 'var(--pqc-accent)' }}>
+                return (
+                  <tr
+                    key={idx}
+                    className="clickable-row pqc-row"
+                    onClick={() => onSelectFinding(idx)}
+                  >
+                    <td>
+                      <div className="algo-cell-block">
+                        <span className="algo-primary-title">{rec.currentAlgorithm}</span>
+                      </div>
+                    </td>
+                    <td>
+                      <span className="table-purpose-text">{purposeDisplay}</span>
+                    </td>
+                    <td>
+                      {rec.recommendedAlgorithm ? (
+                        <div className="recommendation-focal-cell">
+                          <span className="table-recommended-text">
                             {rec.recommendedAlgorithm}
-                          </strong>
-                        ) : (
-                          <span className="text-muted font-mono" style={{ fontSize: '11px' }}>
-                            {rec.recommendationStatus === 'NOT_REQUIRED' ? 'Not Required' : 'Needs Analysis'}
                           </span>
-                        )}
-                      </td>
-                      <td>
-                        <span className="tag-subtle font-mono">{strategy}</span>
-                      </td>
-                      <td>
-                        <span className={`risk-badge ${rec.migrationPriority.toLowerCase()}`}>
-                          {rec.migrationPriority}
-                        </span>
-                      </td>
-                      <td>
-                        <span className={`pqc-status-badge ${rec.recommendationStatus.toLowerCase()}`}>
-                          {rec.recommendationStatus}
-                        </span>
-                      </td>
-                      <td>
-                        <span className="font-mono text-muted" style={{ fontSize: '11px' }}>
-                          {finding.file.split(/[\\/]/).pop()}:{finding.line}
-                        </span>
-                      </td>
-                      <td>
-                        <button
-                          className="btn-secondary btn-sm"
-                          style={{ padding: '3px 8px', fontSize: '11px' }}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onSelectFinding(index);
-                          }}
-                        >
-                          Inspect
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
+                          <span className="table-recommended-sub">
+                            {rec.recommendedAlgorithm.includes('ML-KEM')
+                              ? 'FIPS 203'
+                              : rec.recommendedAlgorithm.includes('ML-DSA')
+                              ? 'FIPS 204'
+                              : rec.recommendedAlgorithm.includes('SLH-DSA')
+                              ? 'FIPS 205'
+                              : 'NIST Standard'}
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="table-text-muted">Needs Analysis</span>
+                      )}
+                    </td>
+                    <td>
+                      <span className="table-strategy-text">{strategyDisplay}</span>
+                    </td>
+                    <td>
+                      <span className={`risk-badge ${rec.migrationPriority.toLowerCase()}`}>
+                        {rec.migrationPriority}
+                      </span>
+                    </td>
+                    <td style={{ textAlign: 'right' }}>
+                      <button
+                        className="btn-secondary btn-sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onSelectFinding(idx);
+                        }}
+                      >
+                        Inspect
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

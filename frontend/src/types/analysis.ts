@@ -315,3 +315,32 @@ export interface ErrorResponse {
   message: string;
   path: string;
 }
+
+// Phase 4 Multi-Input Scan Architecture Types
+export type ScanInputType =
+  | 'ZIP_ARCHIVE'
+  | 'DIRECTORY'
+  | 'GIT_REPOSITORY'
+  | 'FILES'
+  | 'JAR'
+  | 'CLASS'
+  | 'CONFIGURATION'
+  | 'CONTAINER_IMAGE';
+
+export type AnalysisScopeType =
+  | 'CRYPTO_APIS'
+  | 'DEPENDENCIES'
+  | 'CERTIFICATES'
+  | 'QUANTUM_RISK'
+  | 'PQC_MIGRATION'
+  | 'CBOM';
+
+export interface ScanRequest {
+  inputType: ScanInputType;
+  sourceIdentifier: string;
+  directoryPath?: string;
+  repositoryUrl?: string;
+  projectName?: string;
+  context?: ProjectAnalysisContext;
+  scopes?: AnalysisScopeType[];
+}

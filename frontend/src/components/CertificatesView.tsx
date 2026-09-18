@@ -5,6 +5,16 @@ interface CertificatesViewProps {
   certificates?: CertificateArtifactFinding[];
 }
 
+// Helper to convert ALL_CAPS_SNAKE to readable Title Case
+const formatTitleCase = (str: string): string => {
+  if (!str) return '';
+  return str
+    .toLowerCase()
+    .split('_')
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+};
+
 export const CertificatesView: React.FC<CertificatesViewProps> = ({
   certificates = [],
 }) => {
@@ -43,14 +53,12 @@ export const CertificatesView: React.FC<CertificatesViewProps> = ({
             <table className="enterprise-table">
               <thead>
                 <tr>
-                  <th>Artifact Filename</th>
-                  <th>Certificate Type</th>
-                  <th>Public Key Algorithm</th>
-                  <th>Key Size</th>
-                  <th>Signature Algorithm</th>
-                  <th>Validity Dates</th>
-                  <th>Confidence</th>
-                  <th>Quantum Status</th>
+                  <th style={{ width: '22%' }}>Artifact Filename</th>
+                  <th style={{ width: '12%' }}>Type</th>
+                  <th style={{ width: '18%' }}>Public Key Algorithm</th>
+                  <th style={{ width: '18%' }}>Signature Algorithm</th>
+                  <th style={{ width: '14%' }}>Validity Period</th>
+                  <th style={{ width: '16%' }}>Quantum Status</th>
                 </tr>
               </thead>
               <tbody>
@@ -62,31 +70,33 @@ export const CertificatesView: React.FC<CertificatesViewProps> = ({
                   return (
                     <tr key={idx}>
                       <td>
-                        <strong className="font-mono text-primary">{cert.fileName}</strong>
+                        <strong className="algo-primary-title font-mono">{cert.fileName}</strong>
                       </td>
                       <td>
-                        <span className="tag-subtle">{cert.certificateType || cert.fileType || 'X.509'}</span>
+                        <span className="table-purpose-text">{formatTitleCase(cert.certificateType || cert.fileType || 'X.509')}</span>
                       </td>
                       <td>
-                        <span className="algo-text">{cert.publicKeyAlgorithm || 'RSA'}</span>
-                      </td>
-                      <td className="font-mono">
-                        {cert.keySize ? `${cert.keySize} bits` : '—'}
+                        <div className="algo-cell-block">
+                          <span className="algo-primary-title">{cert.publicKeyAlgorithm || 'RSA'}</span>
+                          {cert.keySize && (
+                            <span className="algo-secondary-sub font-mono">{cert.keySize} bits</span>
+                          )}
+                        </div>
                       </td>
                       <td>
-                        <span className="tag-subtle font-mono">{cert.signatureAlgorithm || 'SHA256withRSA'}</span>
-                      </td>
-                      <td>
-                        <span className="font-mono text-muted" style={{ fontSize: '11px' }}>
-                          {cert.validityDates || 'Validity active'}
+                        <span className="font-mono text-secondary" style={{ fontSize: '12px' }}>
+                          {cert.signatureAlgorithm || 'SHA256withRSA'}
                         </span>
                       </td>
                       <td>
-                        <span className="tag-subtle font-mono">{cert.confidence || 'HIGH'}</span>
+                        <span className="font-mono text-muted" style={{ fontSize: '11px' }}>
+                          {cert.validityDates || 'Active'}
+                        </span>
                       </td>
                       <td>
                         <span className={`quantum-badge ${isRsaOrEcc ? 'vulnerable' : 'safe'}`}>
-                          {isRsaOrEcc ? 'VULNERABLE (SHOR)' : 'RESISTANT'}
+                          <span className={`status-dot-sm ${isRsaOrEcc ? 'vuln' : 'safe'}`}></span>
+                          {isRsaOrEcc ? 'Vulnerable (Shor)' : 'Quantum Safe'}
                         </span>
                       </td>
                     </tr>

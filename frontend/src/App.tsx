@@ -30,6 +30,22 @@ const DEFAULT_USER: UserSession = {
 };
 
 function App() {
+  // Theme State (Default to 'dark' with localStorage persistence)
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
+    const saved = localStorage.getItem('ecdat_theme');
+    if (saved === 'light' || saved === 'dark') return saved;
+    return 'dark';
+  });
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('ecdat_theme', theme);
+  }, [theme]);
+
+  const handleToggleTheme = () => {
+    setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
+  };
+
   // Authentication State
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
     return localStorage.getItem('ecdat_auth') === 'true';
@@ -204,6 +220,10 @@ function App() {
             }
           }}
           targetPath={analysisData?.sourcePath || activeTarget}
+          theme={theme}
+          onToggleTheme={handleToggleTheme}
+          user={user}
+          onNavigateSettings={() => setActivePage('settings')}
         />
 
         <main className="main-content-area">
@@ -308,7 +328,10 @@ function App() {
           )}
 
           {activePage === 'reports' && (
-            <ReportsView analysisData={analysisData} />
+            <ReportsView
+              analysisData={analysisData}
+              onNavigateScan={() => setActivePage('scan')}
+            />
           )}
 
           {activePage === 'settings' && (
@@ -316,6 +339,9 @@ function App() {
               user={user}
               backendStatus={backendStatus}
               onHealthCheck={checkHealth}
+              theme={theme}
+              onToggleTheme={handleToggleTheme}
+              onLogout={handleLogout}
             />
           )}
         </main>

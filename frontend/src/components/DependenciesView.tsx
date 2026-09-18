@@ -15,6 +15,16 @@ interface AggregatedDependency {
   count: number;
 }
 
+// Helper to convert ALL_CAPS_SNAKE to readable Title Case
+const formatTitleCase = (str: string): string => {
+  if (!str) return '';
+  return str
+    .toLowerCase()
+    .split('_')
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+};
+
 export const DependenciesView: React.FC<DependenciesViewProps> = ({
   findings,
   riskAssessments,
@@ -72,34 +82,36 @@ export const DependenciesView: React.FC<DependenciesViewProps> = ({
           <table className="enterprise-table">
             <thead>
               <tr>
-                <th>Library / Security Provider</th>
-                <th>Usage Mode</th>
-                <th>Cryptographic Primitives Invoked</th>
-                <th>Discovered Instances</th>
-                <th>Peak Risk Score</th>
-                <th>Risk Tier</th>
-                <th>PQC Posture</th>
+                <th style={{ width: '25%' }}>Library / Security Provider</th>
+                <th style={{ width: '15%' }}>Usage Mode</th>
+                <th style={{ width: '22%' }}>Cryptographic Primitives</th>
+                <th style={{ width: '10%' }}>Instances</th>
+                <th style={{ width: '10%' }}>Peak Risk</th>
+                <th style={{ width: '10%' }}>Risk Tier</th>
+                <th style={{ width: '18%' }}>PQC Posture</th>
               </tr>
             </thead>
             <tbody>
               {dependencies.map((dep, idx) => (
                 <tr key={idx}>
                   <td>
-                    <strong className="text-primary">{dep.library}</strong>
+                    <strong className="algo-primary-title">{dep.library}</strong>
                   </td>
                   <td>
-                    <span className="tag-subtle font-mono">{dep.usageCategory}</span>
+                    <span className="table-purpose-text">{formatTitleCase(dep.usageCategory)}</span>
                   </td>
                   <td>
                     <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
                       {dep.primitives.map((p) => (
-                        <span key={p} className="tag-subtle">{p}</span>
+                        <span key={p} className="matrix-chip-algo font-mono font-bold" style={{ fontSize: '11.5px' }}>
+                          {p}
+                        </span>
                       ))}
                     </div>
                   </td>
-                  <td className="font-mono">{dep.count}</td>
+                  <td className="font-mono" style={{ fontSize: '13px' }}>{dep.count}</td>
                   <td className="font-mono">
-                    <span style={{ color: dep.highestRiskLevel === 'CRITICAL' ? 'var(--risk-critical)' : 'var(--text-primary)' }}>
+                    <span style={{ color: dep.highestRiskLevel === 'CRITICAL' ? 'var(--risk-critical)' : 'var(--text-primary)', fontWeight: 700, fontSize: '13px' }}>
                       {dep.maxRiskScore}/100
                     </span>
                   </td>
@@ -109,8 +121,8 @@ export const DependenciesView: React.FC<DependenciesViewProps> = ({
                     </span>
                   </td>
                   <td>
-                    <span className="tag-subtle">
-                      Provider migration to NIST FIPS 203/204/205 required
+                    <span className="table-threat-text" style={{ fontSize: '11.5px' }}>
+                      Migrate to NIST FIPS 203/204/205
                     </span>
                   </td>
                 </tr>

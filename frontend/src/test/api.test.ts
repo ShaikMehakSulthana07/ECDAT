@@ -85,4 +85,39 @@ describe('ECDAT API Service Tests', () => {
       })
     );
   });
+
+  it('analyzeZip delegates to analyzeArchive', async () => {
+    const mockFile = new File(['dummy zip content'], 'project.zip', { type: 'application/zip' });
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ status: 'SUCCESS', sourcePath: 'temp/project.zip' }),
+    });
+
+    const result = await apiService.analyzeZip(mockFile);
+    expect(result.status).toBe('SUCCESS');
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      'http://localhost:8080/api/analyze/upload',
+      expect.objectContaining({
+        method: 'POST',
+      })
+    );
+  });
+
+  it('analyzeRepository throws explicit unsupported ApiError', async () => {
+    await expect(apiService.analyzeRepository('https://github.com/org/repo.git')).rejects.toThrow(
+      'Git repository analysis requires backend service integration'
+    );
+  });
+
+  it('analyzeFiles throws explicit unsupported ApiError', async () => {
+    await expect(apiService.analyzeFiles([])).rejects.toThrow(
+      'Loose file/binary scanning is currently in active development'
+    );
+  });
+
+  it('analyzeContainer throws explicit unsupported ApiError', async () => {
+    await expect(apiService.analyzeContainer('docker.io/app:latest')).rejects.toThrow(
+      'Container image inspection requires container daemon integration'
+    );
+  });
 });

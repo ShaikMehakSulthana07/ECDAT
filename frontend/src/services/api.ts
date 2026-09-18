@@ -115,4 +115,44 @@ export const apiService = {
       );
     }
   },
+
+  /**
+   * Primary method for ZIP archive analysis in Phase 4.
+   */
+  async analyzeZip(file: File, context?: ProjectAnalysisContext): Promise<AnalysisResponse> {
+    return this.analyzeArchive(file, context);
+  },
+
+  /**
+   * Roadmap stub for Git Repository scanning (Phase 5).
+   */
+  async analyzeRepository(_url: string, _context?: ProjectAnalysisContext): Promise<AnalysisResponse> {
+    throw new ApiError(
+      'Git repository analysis requires backend service integration (Roadmap feature - Phase 5).',
+      400,
+      'UNSUPPORTED_INPUT_TYPE'
+    );
+  },
+
+  /**
+   * Roadmap stub for loose files/binaries scanning (Phase 6 & 7).
+   */
+  async analyzeFiles(_files: File[], _context?: ProjectAnalysisContext): Promise<AnalysisResponse> {
+    throw new ApiError(
+      'Loose file/binary scanning is currently in active development (Roadmap feature - Phase 6/7).',
+      400,
+      'UNSUPPORTED_INPUT_TYPE'
+    );
+  },
+
+  /**
+   * Roadmap stub for Container Image scanning (Phase 8).
+   */
+  async analyzeContainer(_image: string, _context?: ProjectAnalysisContext): Promise<AnalysisResponse> {
+    throw new ApiError(
+      'Container image inspection requires container daemon integration (Roadmap feature - Phase 8).',
+      400,
+      'UNSUPPORTED_INPUT_TYPE'
+    );
+  },
 };

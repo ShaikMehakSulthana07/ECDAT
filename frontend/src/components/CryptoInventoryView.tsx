@@ -10,6 +10,16 @@ interface CryptoInventoryViewProps {
   searchQuery?: string;
 }
 
+// Helper to convert ALL_CAPS_SNAKE to readable Title Case
+const formatTitleCase = (str: string): string => {
+  if (!str) return '';
+  return str
+    .toLowerCase()
+    .split('_')
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+};
+
 export const CryptoInventoryView: React.FC<CryptoInventoryViewProps> = ({
   findings,
   riskAssessments,
@@ -21,14 +31,13 @@ export const CryptoInventoryView: React.FC<CryptoInventoryViewProps> = ({
   const [localSearch, setLocalSearch] = useState('');
   const [riskFilter, setRiskFilter] = useState<string>('ALL');
   const [quantumFilter, setQuantumFilter] = useState<string>('ALL');
-  const [categoryFilter, setCategoryFilter] = useState<string>('ALL');
-  const [lifecycleFilter, setLifecycleFilter] = useState<string>('ALL');
   const [purposeFilter, setPurposeFilter] = useState<string>('ALL');
+  const [confidenceFilter, setConfidenceFilter] = useState<string>('ALL');
   const [sortField, setSortField] = useState<'algorithm' | 'risk' | 'file' | 'purpose'>('risk');
   const [sortAsc, setSortAsc] = useState(false);
 
   const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = 15;
+  const pageSize = 12;
 
   const effectiveSearch = searchQuery || localSearch;
 
@@ -51,10 +60,8 @@ export const CryptoInventoryView: React.FC<CryptoInventoryViewProps> = ({
         const algoMatch = item.finding.algorithm.toLowerCase().includes(q);
         const variantMatch = (item.finding.variant || '').toLowerCase().includes(q);
         const fileMatch = item.finding.file.toLowerCase().includes(q);
-        const evidenceMatch = item.finding.evidence.toLowerCase().includes(q);
         const purposeMatch = item.finding.purpose.toLowerCase().includes(q);
-        const catMatch = (item.finding.assetCategory || '').toLowerCase().includes(q);
-        if (!algoMatch && !variantMatch && !fileMatch && !evidenceMatch && !purposeMatch && !catMatch) {
+        if (!algoMatch && !variantMatch && !fileMatch && !purposeMatch) {
           return false;
         }
       }
@@ -68,23 +75,9 @@ export const CryptoInventoryView: React.FC<CryptoInventoryViewProps> = ({
 
       // Quantum filter
       if (quantumFilter !== 'ALL') {
-        if (!item.risk || item.risk.quantumRisk !== quantumFilter) {
-          return false;
-        }
-      }
-
-      // Category filter
-      if (categoryFilter !== 'ALL') {
-        if (item.finding.assetCategory !== categoryFilter) {
-          return false;
-        }
-      }
-
-      // Lifecycle filter
-      if (lifecycleFilter !== 'ALL') {
-        if (item.finding.lifecycleStatus !== lifecycleFilter) {
-          return false;
-        }
+        const isVuln = item.risk?.quantumRisk === 'HIGH' || item.risk?.quantumRiskResult?.quantumVulnerable;
+        if (quantumFilter === 'VULNERABLE' && !isVuln) return false;
+        if (quantumFilter === 'SAFE' && isVuln) return false;
       }
 
       // Purpose filter
@@ -94,9 +87,16 @@ export const CryptoInventoryView: React.FC<CryptoInventoryViewProps> = ({
         }
       }
 
+      // Confidence filter
+      if (confidenceFilter !== 'ALL') {
+        if (item.finding.confidence !== confidenceFilter) {
+          return false;
+        }
+      }
+
       return true;
     });
-  }, [items, effectiveSearch, riskFilter, quantumFilter, categoryFilter, lifecycleFilter, purposeFilter]);
+  }, [items, effectiveSearch, riskFilter, quantumFilter, purposeFilter, confidenceFilter]);
 
   // Sorted Items
   const sortedItems = useMemo(() => {
@@ -109,10 +109,10 @@ export const CryptoInventoryView: React.FC<CryptoInventoryViewProps> = ({
         const scoreA = a.risk?.riskScore || 0;
         const scoreB = b.risk?.riskScore || 0;
         cmp = scoreA - scoreB;
-      } else if (sortField === 'file') {
-        cmp = a.finding.file.localeCompare(b.finding.file);
       } else if (sortField === 'purpose') {
         cmp = a.finding.purpose.localeCompare(b.finding.purpose);
+      } else if (sortField === 'file') {
+        cmp = a.finding.file.localeCompare(b.finding.file);
       }
       return sortAsc ? cmp : -cmp;
     });
@@ -120,16 +120,8 @@ export const CryptoInventoryView: React.FC<CryptoInventoryViewProps> = ({
   }, [filteredItems, sortField, sortAsc]);
 
   // Pagination
-  const totalPages = Math.ceil(sortedItems.length / pageSize) || 1;
+  const totalPages = Math.max(1, Math.ceil(sortedItems.length / pageSize));
   const paginatedItems = sortedItems.slice((currentPage - 1) * pageSize, currentPage * pageSize);
-
-  const uniqueCategories = useMemo(() => {
-    return Array.from(new Set(findings.map((f) => f.assetCategory).filter(Boolean)));
-  }, [findings]);
-
-  const uniquePurposes = useMemo(() => {
-    return Array.from(new Set(findings.map((f) => f.purpose)));
-  }, [findings]);
 
   const handleSort = (field: 'algorithm' | 'risk' | 'file' | 'purpose') => {
     if (sortField === field) {
@@ -140,42 +132,41 @@ export const CryptoInventoryView: React.FC<CryptoInventoryViewProps> = ({
     }
   };
 
-  const resetFilters = () => {
-    setLocalSearch('');
-    setRiskFilter('ALL');
-    setQuantumFilter('ALL');
-    setCategoryFilter('ALL');
-    setLifecycleFilter('ALL');
-    setPurposeFilter('ALL');
-    setCurrentPage(1);
-  };
+  const purposes = useMemo(() => {
+    return Array.from(new Set(findings.map((f) => f.purpose)));
+  }, [findings]);
 
   return (
     <div>
+      {/* Header */}
       <div className="view-header">
         <div className="view-title-group">
-          <h1 className="view-title">Cryptographic Asset Inventory</h1>
-          <p className="view-subtitle">
-            Comprehensive catalog of discovered cryptographic primitives, key lengths, purpose classifications, and source code locations.
-          </p>
+          <h1 className="view-title">Crypto Inventory</h1>
+          <p className="view-subtitle">Discovered cryptographic assets, primitives, key sizes, and source locations</p>
         </div>
       </div>
 
+      {/* Main Inventory Card */}
       <div className="card-panel">
-        {/* Filter Controls Toolbar */}
+        {/* Filter Toolbar matching Screen 6 Reference */}
         <div className="filter-toolbar">
           <div className="filter-controls-group">
-            <input
-              type="text"
-              className="topbar-search-input"
-              style={{ width: '240px' }}
-              placeholder="Search assets &amp; code..."
-              value={localSearch}
-              onChange={(e) => {
-                setLocalSearch(e.target.value);
-                setCurrentPage(1);
-              }}
-            />
+            <div className="search-input-wrap">
+              <svg className="search-icon-inside" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="11" cy="11" r="8" />
+                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+              </svg>
+              <input
+                type="text"
+                className="topbar-search-input search-input-pad"
+                placeholder="Search algorithm, purpose, or file..."
+                value={localSearch}
+                onChange={(e) => {
+                  setLocalSearch(e.target.value);
+                  setCurrentPage(1);
+                }}
+              />
+            </div>
 
             <select
               className="filter-select"
@@ -185,7 +176,7 @@ export const CryptoInventoryView: React.FC<CryptoInventoryViewProps> = ({
                 setCurrentPage(1);
               }}
             >
-              <option value="ALL">All Risk Levels</option>
+              <option value="ALL">All Risks</option>
               <option value="CRITICAL">Critical Risk</option>
               <option value="HIGH">High Risk</option>
               <option value="MEDIUM">Medium Risk</option>
@@ -200,169 +191,125 @@ export const CryptoInventoryView: React.FC<CryptoInventoryViewProps> = ({
                 setCurrentPage(1);
               }}
             >
-              <option value="ALL">All Quantum Risk</option>
-              <option value="HIGH">Quantum High (Vulnerable)</option>
-              <option value="LOW">Quantum Low (Resistant)</option>
-              <option value="NONE">None</option>
+              <option value="ALL">All Quantum Status</option>
+              <option value="VULNERABLE">Vulnerable</option>
+              <option value="SAFE">Safe</option>
             </select>
+
+            {purposes.length > 1 && (
+              <select
+                className="filter-select"
+                value={purposeFilter}
+                onChange={(e) => {
+                  setPurposeFilter(e.target.value);
+                  setCurrentPage(1);
+                }}
+              >
+                <option value="ALL">All Purposes</option>
+                {purposes.map((p) => (
+                  <option key={p} value={p}>{formatTitleCase(p)}</option>
+                ))}
+              </select>
+            )}
 
             <select
               className="filter-select"
-              value={categoryFilter}
+              value={confidenceFilter}
               onChange={(e) => {
-                setCategoryFilter(e.target.value);
+                setConfidenceFilter(e.target.value);
                 setCurrentPage(1);
               }}
             >
-              <option value="ALL">All Categories</option>
-              {uniqueCategories.map((c) => (
-                <option key={c} value={c}>
-                  {c?.replace('_', ' ')}
-                </option>
-              ))}
-            </select>
-
-            <select
-              className="filter-select"
-              value={lifecycleFilter}
-              onChange={(e) => {
-                setLifecycleFilter(e.target.value);
-                setCurrentPage(1);
-              }}
-            >
-              <option value="ALL">All Lifecycles</option>
-              <option value="ACTIVE">Active</option>
-              <option value="DEPRECATED">Deprecated</option>
-              <option value="UNKNOWN">Unknown</option>
-            </select>
-
-            <select
-              className="filter-select"
-              value={purposeFilter}
-              onChange={(e) => {
-                setPurposeFilter(e.target.value);
-                setCurrentPage(1);
-              }}
-            >
-              <option value="ALL">All Purposes</option>
-              {uniquePurposes.map((p) => (
-                <option key={p} value={p}>
-                  {p}
-                </option>
-              ))}
+              <option value="ALL">All Confidence</option>
+              <option value="HIGH">High Confidence</option>
+              <option value="MEDIUM">Medium Confidence</option>
+              <option value="LOW">Low Confidence</option>
             </select>
           </div>
-
-          {(effectiveSearch || riskFilter !== 'ALL' || quantumFilter !== 'ALL' || categoryFilter !== 'ALL' || lifecycleFilter !== 'ALL' || purposeFilter !== 'ALL') && (
-            <button className="btn-secondary btn-sm" onClick={resetFilters}>
-              Reset Filters
-            </button>
-          )}
         </div>
 
-        {/* Enterprise Data Table */}
+        {/* Table */}
         <div className="table-container">
           <table className="enterprise-table">
             <thead>
               <tr>
-                <th style={{ width: '40px' }}>#</th>
-                <th onClick={() => handleSort('algorithm')} style={{ cursor: 'pointer' }}>
+                <th style={{ width: '24%', cursor: 'pointer' }} onClick={() => handleSort('algorithm')}>
                   Algorithm {sortField === 'algorithm' ? (sortAsc ? '▲' : '▼') : ''}
                 </th>
-                <th>Variant</th>
-                <th onClick={() => handleSort('purpose')} style={{ cursor: 'pointer' }}>
+                <th style={{ width: '20%', cursor: 'pointer' }} onClick={() => handleSort('purpose')}>
                   Purpose {sortField === 'purpose' ? (sortAsc ? '▲' : '▼') : ''}
                 </th>
-                <th>Category</th>
-                <th>Lifecycle</th>
-                <th>Key Size</th>
-                <th onClick={() => handleSort('risk')} style={{ cursor: 'pointer' }}>
+                <th style={{ width: '12%', cursor: 'pointer' }} onClick={() => handleSort('risk')}>
                   Risk {sortField === 'risk' ? (sortAsc ? '▲' : '▼') : ''}
                 </th>
-                <th>Quantum Risk</th>
-                <th>Confidence</th>
-                <th onClick={() => handleSort('file')} style={{ cursor: 'pointer' }}>
-                  Source {sortField === 'file' ? (sortAsc ? '▲' : '▼') : ''}
+                <th style={{ width: '16%' }}>Quantum Status</th>
+                <th style={{ width: '20%', cursor: 'pointer' }} onClick={() => handleSort('file')}>
+                  Location {sortField === 'file' ? (sortAsc ? '▲' : '▼') : ''}
                 </th>
-                <th>Action</th>
+                <th style={{ width: '8%', textAlign: 'right' }}>Action</th>
               </tr>
             </thead>
             <tbody>
               {paginatedItems.length === 0 ? (
                 <tr>
-                  <td colSpan={12} style={{ textAlign: 'center', padding: '32px', color: 'var(--text-muted)' }}>
-                    No cryptographic assets match the current filter criteria.
+                  <td colSpan={6} style={{ textAlign: 'center', padding: '36px', color: 'var(--text-muted)' }}>
+                    No cryptographic assets match the selected filter criteria.
                   </td>
                 </tr>
               ) : (
-                paginatedItems.map((item) => {
-                  const isSelected = selectedIndex === item.index;
-                  const riskLevel = item.risk?.riskLevel || 'LOW';
-                  const quantumRisk = item.risk?.quantumRisk || 'NONE';
-                  const category = item.finding.assetCategory || 'UNKNOWN';
-                  const lifecycle = item.finding.lifecycleStatus || 'UNKNOWN';
+                paginatedItems.map(({ index, finding, risk }) => {
+                  const riskLevel = risk?.riskLevel || 'LOW';
+                  const isQuantumVuln = risk?.quantumRisk === 'HIGH' || risk?.quantumRiskResult?.quantumVulnerable;
+                  const isSelected = selectedIndex === index;
+                  const purposeDisplay = formatTitleCase(finding.purpose);
 
                   return (
                     <tr
-                      key={item.index}
-                      className={`clickable-row ${isSelected ? 'selected' : ''}`}
-                      onClick={() => onSelectFinding(item.index)}
+                      key={index}
+                      className={`clickable-row ${isSelected ? 'row-selected' : ''}`}
+                      onClick={() => onSelectFinding(index)}
                     >
-                      <td className="font-mono text-muted">{item.index + 1}</td>
                       <td>
-                        <span className="algo-text">{item.finding.algorithm}</span>
+                        <div className="algo-cell-block">
+                          <span className="algo-primary-title">{finding.algorithm}</span>
+                          {(finding.keySize || (finding.variant && finding.variant !== finding.algorithm)) && (
+                            <span className="algo-secondary-sub font-mono">
+                              {finding.keySize ? `${finding.keySize} bits` : ''}
+                              {finding.keySize && finding.variant && finding.variant !== finding.algorithm ? ' · ' : ''}
+                              {finding.variant && finding.variant !== finding.algorithm ? finding.variant : ''}
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td>
-                        {item.finding.variant ? (
-                          <span className="tag-subtle">{item.finding.variant}</span>
-                        ) : (
-                          <span className="text-muted">—</span>
-                        )}
-                      </td>
-                      <td>
-                        <span className="tag-subtle">{item.finding.purpose}</span>
-                      </td>
-                      <td>
-                        <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
-                          {category.replace('_', ' ')}
-                        </span>
-                      </td>
-                      <td>
-                        <span className={`risk-badge ${lifecycle === 'DEPRECATED' ? 'critical' : lifecycle === 'ACTIVE' ? 'low' : 'medium'}`}>
-                          {lifecycle}
-                        </span>
-                      </td>
-                      <td className="font-mono">
-                        {item.finding.keySize ? `${item.finding.keySize} bits` : '—'}
+                        <span className="table-purpose-text">{purposeDisplay}</span>
                       </td>
                       <td>
                         <span className={`risk-badge ${riskLevel.toLowerCase()}`}>
-                          {riskLevel} {item.risk ? `(${item.risk.riskScore})` : ''}
+                          {riskLevel}
                         </span>
                       </td>
                       <td>
-                        <span className={`quantum-badge ${quantumRisk.toLowerCase()}`}>
-                          {quantumRisk === 'HIGH' ? 'VULNERABLE' : quantumRisk === 'LOW' ? 'SAFE' : quantumRisk}
+                        <span className={`quantum-badge ${isQuantumVuln ? 'vulnerable' : 'safe'}`}>
+                          <span className={`status-dot-sm ${isQuantumVuln ? 'vuln' : 'safe'}`}></span>
+                          {isQuantumVuln ? 'Vulnerable' : 'Safe'}
                         </span>
                       </td>
                       <td>
-                        <span className="tag-subtle font-mono">{item.finding.confidence}</span>
+                        <div className="source-location-cell font-mono" title={finding.file}>
+                          <span className="source-file">{finding.file.split(/[\\/]/).pop()}</span>
+                          <span className="source-line">:{finding.line}</span>
+                        </div>
                       </td>
-                      <td>
-                        <span className="font-mono text-muted" style={{ fontSize: '11px' }} title={item.finding.file}>
-                          {item.finding.file.split(/[\\/]/).pop()}:{item.finding.line}
-                        </span>
-                      </td>
-                      <td>
+                      <td style={{ textAlign: 'right' }}>
                         <button
                           className="btn-secondary btn-sm"
-                          style={{ padding: '3px 8px', fontSize: '11px' }}
                           onClick={(e) => {
                             e.stopPropagation();
-                            onSelectFinding(item.index);
+                            onSelectFinding(index);
                           }}
                         >
-                          Inspect
+                          View
                         </button>
                       </td>
                     </tr>
@@ -373,29 +320,36 @@ export const CryptoInventoryView: React.FC<CryptoInventoryViewProps> = ({
           </table>
         </div>
 
-        {/* Pagination Bar */}
-        <div className="table-stats-bar">
-          <span>
-            Showing <strong>{paginatedItems.length}</strong> of <strong>{sortedItems.length}</strong> matching assets (Total: {findings.length})
-          </span>
+        {/* Footer Stats & Pagination matching Reference */}
+        <div className="table-footer-bar">
+          <div className="table-stats-info">
+            Showing <strong>{paginatedItems.length}</strong> of <strong>{sortedItems.length}</strong> assets (Total: {findings.length})
+          </div>
+
           {totalPages > 1 && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div className="table-pagination">
               <button
-                className="btn-secondary btn-sm"
+                className="pagination-btn"
                 disabled={currentPage === 1}
-                onClick={() => setCurrentPage(currentPage - 1)}
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
               >
-                Previous
+                ‹
               </button>
-              <span className="font-mono" style={{ fontSize: '12px' }}>
-                Page {currentPage} of {totalPages}
-              </span>
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+                <button
+                  key={p}
+                  className={`pagination-page-btn ${currentPage === p ? 'active' : ''}`}
+                  onClick={() => setCurrentPage(p)}
+                >
+                  {p}
+                </button>
+              ))}
               <button
-                className="btn-secondary btn-sm"
+                className="pagination-btn"
                 disabled={currentPage === totalPages}
-                onClick={() => setCurrentPage(currentPage + 1)}
+                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
               >
-                Next
+                ›
               </button>
             </div>
           )}

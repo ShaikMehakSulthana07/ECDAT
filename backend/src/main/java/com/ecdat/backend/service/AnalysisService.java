@@ -5,6 +5,10 @@ import com.ecdat.backend.cbom.CBOMGenerator;
 import com.ecdat.backend.dto.AnalysisResponse;
 import com.ecdat.backend.dto.AnalysisSummary;
 import com.ecdat.backend.dto.ProjectAnalysisContext;
+import com.ecdat.backend.input.InputAdapter;
+import com.ecdat.backend.input.InputAdapterRegistry;
+import com.ecdat.backend.input.ScanRequest;
+import com.ecdat.backend.input.ScanWorkspace;
 import com.ecdat.backend.inventory.CryptoAsset;
 import com.ecdat.backend.inventory.CryptoInventory;
 import com.ecdat.backend.inventory.CryptoUsageCategory;
@@ -29,17 +33,9 @@ import com.ecdat.backend.scanner.maven.MavenDependencyFinding;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.File;
 import java.io.IOException;
-import java.io.OutputStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipInputStream;
 
 @Service
 public class AnalysisService {
@@ -52,6 +48,7 @@ public class AnalysisService {
     private final QuantumRiskEngine quantumRiskEngine;
     private final MavenDependencyScanner mavenDependencyScanner;
     private final CertificateArtifactScanner certificateArtifactScanner;
+    private final InputAdapterRegistry inputAdapterRegistry;
 
     public AnalysisService() {
         this.scanner = new JavaSourceScanner();
@@ -62,6 +59,7 @@ public class AnalysisService {
         this.quantumRiskEngine = new QuantumRiskEngine();
         this.mavenDependencyScanner = new MavenDependencyScanner();
         this.certificateArtifactScanner = new CertificateArtifactScanner();
+        this.inputAdapterRegistry = new InputAdapterRegistry();
     }
 
     public AnalysisService(JavaSourceScanner scanner, RiskEngine riskEngine,
@@ -76,6 +74,7 @@ public class AnalysisService {
         this.quantumRiskEngine = quantumRiskEngine;
         this.mavenDependencyScanner = mavenDependencyScanner;
         this.certificateArtifactScanner = certificateArtifactScanner;
+        this.inputAdapterRegistry = new InputAdapterRegistry();
     }
 
     public AnalysisService(JavaSourceScanner scanner, InventoryClassifier inventoryClassifier,
@@ -91,6 +90,50 @@ public class AnalysisService {
         this.quantumRiskEngine = quantumRiskEngine;
         this.mavenDependencyScanner = mavenDependencyScanner;
         this.certificateArtifactScanner = certificateArtifactScanner;
+        this.inputAdapterRegistry = new InputAdapterRegistry();
+    }
+
+    public AnalysisService(JavaSourceScanner scanner, InventoryClassifier inventoryClassifier,
+                           RiskEngine riskEngine, PQCRecommendationEngine pqcEngine,
+                           CBOMGenerator cbomGenerator, QuantumRiskEngine quantumRiskEngine,
+                           MavenDependencyScanner mavenDependencyScanner,
+                           CertificateArtifactScanner certificateArtifactScanner,
+                           InputAdapterRegistry inputAdapterRegistry) {
+        this.scanner = scanner;
+        this.inventoryClassifier = inventoryClassifier;
+        this.riskEngine = riskEngine;
+        this.pqcEngine = pqcEngine;
+        this.cbomGenerator = cbomGenerator;
+        this.quantumRiskEngine = quantumRiskEngine;
+        this.mavenDependencyScanner = mavenDependencyScanner;
+        this.certificateArtifactScanner = certificateArtifactScanner;
+        this.inputAdapterRegistry = inputAdapterRegistry != null ? inputAdapterRegistry : new InputAdapterRegistry();
+    }
+
+    /**
+     * Executes the multi-input discovery pipeline for a given ScanRequest.
+     * Routes the request to the matching InputAdapter, sets up the normalized ScanWorkspace,
+     * runs analysis, and cleans up resources.
+     *
+     * @param request the scan request specifying input type and source details
+     * @return integrated AnalysisResponse
+     */
+    public AnalysisResponse analyze(ScanRequest request) {
+        if (request == null) {
+            throw new IllegalArgumentException("Scan request must not be null.");
+        }
+
+        InputAdapter adapter = inputAdapterRegistry.getAdapter(request.getInputType());
+        ProjectAnalysisContext context = request.getContext();
+        if (context == null) {
+            context = new ProjectAnalysisContext();
+        }
+
+        try (ScanWorkspace workspace = adapter.prepareWorkspace(request)) {
+            return executePipeline(workspace.getSourcePath().toString(), request.getSourceIdentifier(), context);
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to process scan workspace: " + e.getMessage(), e);
+        }
     }
 
     /**
@@ -101,30 +144,8 @@ public class AnalysisService {
      * @return integrated AnalysisResponse containing findings, risk assessments, PQC recommendations, inventory, and CBOM
      */
     public AnalysisResponse analyzeDirectory(String sourcePath, ProjectAnalysisContext context) {
-        if (sourcePath == null || sourcePath.trim().isEmpty()) {
-            throw new IllegalArgumentException("Source path must not be empty or blank.");
-        }
-
-        Path path = Paths.get(sourcePath.trim()).normalize().toAbsolutePath();
-
-        if (!Files.exists(path)) {
-            throw new IllegalArgumentException("Source path does not exist: " + sourcePath);
-        }
-
-        if (!Files.isDirectory(path)) {
-            throw new IllegalArgumentException("Source path is not a directory: " + sourcePath);
-        }
-
-        if (!Files.isReadable(path)) {
-            throw new IllegalArgumentException("Source directory is not readable: " + sourcePath);
-        }
-
-        // Use default context if not provided
-        if (context == null) {
-            context = new ProjectAnalysisContext();
-        }
-
-        return executePipeline(path.toString(), sourcePath, context);
+        ScanRequest request = ScanRequest.forDirectory(sourcePath, context);
+        return analyze(request);
     }
 
     /**
@@ -135,32 +156,8 @@ public class AnalysisService {
      * @return integrated AnalysisResponse
      */
     public AnalysisResponse analyzeArchive(MultipartFile file, ProjectAnalysisContext context) {
-        if (file == null || file.isEmpty()) {
-            throw new IllegalArgumentException("Uploaded archive file is empty or missing.");
-        }
-
-        String originalFilename = file.getOriginalFilename();
-        if (originalFilename == null || !originalFilename.toLowerCase().endsWith(".zip")) {
-            throw new IllegalArgumentException("Only .zip archive files are supported for upload.");
-        }
-
-        // Use default context if not provided
-        if (context == null) {
-            context = new ProjectAnalysisContext();
-        }
-
-        Path tempDir = null;
-        try {
-            tempDir = Files.createTempDirectory("ecdat-upload-");
-            extractZipSafely(file, tempDir);
-            return executePipeline(tempDir.toString(), originalFilename, context);
-        } catch (IOException e) {
-            throw new RuntimeException("Failed to process uploaded archive: " + e.getMessage(), e);
-        } finally {
-            if (tempDir != null) {
-                deleteDirectoryRecursively(tempDir);
-            }
-        }
+        ScanRequest request = ScanRequest.forZip(file, context);
+        return analyze(request);
     }
 
     /**
@@ -242,73 +239,6 @@ public class AnalysisService {
     }
 
     /**
-     * Safely extracts a zip file with Zip Slip and zip bomb protections.
-     */
-    private void extractZipSafely(MultipartFile file, Path targetDir) throws IOException {
-        final int MAX_ENTRIES = 10000;
-        final long MAX_TOTAL_SIZE = 200 * 1024 * 1024; // 200 MB uncompressed limit
-        int entryCount = 0;
-        long totalBytes = 0;
-
-        try (ZipInputStream zis = new ZipInputStream(file.getInputStream())) {
-            ZipEntry entry;
-            while ((entry = zis.getNextEntry()) != null) {
-                entryCount++;
-                if (entryCount > MAX_ENTRIES) {
-                    throw new SecurityException("Archive exceeds maximum allowed entry count of " + MAX_ENTRIES);
-                }
-
-                Path entryDestination = targetDir.resolve(entry.getName()).normalize();
-                if (!entryDestination.startsWith(targetDir.normalize())) {
-                    throw new SecurityException("Zip Slip path traversal attempt detected in entry: " + entry.getName());
-                }
-
-                if (entry.isDirectory() || entry.getName().endsWith("/") || entry.getName().endsWith("\\")) {
-                    if (!Files.exists(entryDestination)) {
-                        Files.createDirectories(entryDestination);
-                    }
-                } else {
-                    Path parent = entryDestination.getParent();
-                    if (parent != null && !Files.exists(parent)) {
-                        Files.createDirectories(parent);
-                    }
-                    if (!Files.isDirectory(entryDestination)) {
-                        try (OutputStream os = Files.newOutputStream(entryDestination)) {
-                            byte[] buffer = new byte[8192];
-                            int len;
-                            while ((len = zis.read(buffer)) > 0) {
-                                totalBytes += len;
-                                if (totalBytes > MAX_TOTAL_SIZE) {
-                                    throw new SecurityException("Archive uncompressed size exceeds maximum allowed limit (200MB).");
-                                }
-                                os.write(buffer, 0, len);
-                            }
-                        }
-                    }
-                }
-                zis.closeEntry();
-            }
-        }
-    }
-
-    /**
-     * Recursively deletes a temporary directory.
-     */
-    private void deleteDirectoryRecursively(Path path) {
-        try {
-            if (Files.exists(path)) {
-                try (var stream = Files.walk(path)) {
-                    stream.sorted(Comparator.reverseOrder())
-                          .map(Path::toFile)
-                          .forEach(File::delete);
-                }
-            }
-        } catch (Exception ignored) {
-            // Best effort cleanup for temporary files
-        }
-    }
-
-    /**
      * Enriches source code findings with library information from Maven dependencies.
      */
     private void enrichFindingsWithLibraryInfo(List<CryptoFinding> findings, List<MavenDependencyFinding> dependencyFindings) {
@@ -323,7 +253,6 @@ public class AnalysisService {
                 for (MavenDependencyFinding depFinding : dependencyFindings) {
                     if (depFinding.isCryptoRelated() && depFinding.getCryptoLibraryName() != null) {
                         // Associate the finding with the crypto library
-                        // This is a heuristic - in a real implementation, you'd need more sophisticated matching
                         finding.setLibrary(depFinding.getCryptoLibraryName());
                         finding.setSourceType("JAVA_AST_MAVEN");
                         break;
@@ -434,5 +363,9 @@ public class AnalysisService {
                 unknownLifecycleCount,
                 directUsageCount
         );
+    }
+
+    public InputAdapterRegistry getInputAdapterRegistry() {
+        return inputAdapterRegistry;
     }
 }
