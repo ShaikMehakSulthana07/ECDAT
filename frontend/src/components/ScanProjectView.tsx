@@ -4,23 +4,31 @@ import type { ProjectAnalysisContext, BusinessCriticality, DataSensitivity } fro
 interface ScanProjectViewProps {
   onScanPath: (path: string, context: ProjectAnalysisContext) => void;
   onScanFile: (file: File, context: ProjectAnalysisContext) => void;
+  onScanRepository?: (url: string, context: ProjectAnalysisContext) => void;
+  onScanConfiguration?: (file: File, context: ProjectAnalysisContext) => void;
+  onScanBinary?: (file: File, context: ProjectAnalysisContext) => void;
+  onScanContainer?: (file: File, context: ProjectAnalysisContext) => void;
   isLoading: boolean;
   activeTarget?: string;
 }
 
-type SourceType = 'upload' | 'repository' | 'binaries' | 'container' | 'path';
+type SourceType = 'upload' | 'repository' | 'configuration' | 'binaries' | 'container' | 'path';
 
 export const ScanProjectView: React.FC<ScanProjectViewProps> = ({
   onScanPath,
   onScanFile,
+  onScanRepository,
+  onScanConfiguration,
+  onScanBinary,
+  onScanContainer,
   isLoading,
   activeTarget,
 }) => {
   const [selectedSource, setSelectedSource] = useState<SourceType>('upload');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
-  const [repoUrl, setRepoUrl] = useState('');
   const [pathInput, setPathInput] = useState<string>('../test-target');
+  const [repositoryUrlInput, setRepositoryUrlInput] = useState<string>('');
   const [uploadSubTab, setUploadSubTab] = useState<'archive' | 'directory'>('archive');
   const [validationError, setValidationError] = useState<string | null>(null);
 
@@ -61,11 +69,40 @@ export const ScanProjectView: React.FC<ScanProjectViewProps> = ({
     setIsDragOver(false);
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       const file = e.dataTransfer.files[0];
-      if (file.name.endsWith('.zip') || file.name.endsWith('.tar') || file.name.endsWith('.tar.gz')) {
-        setSelectedFile(file);
-        setValidationError(null);
-      } else {
-        setValidationError('Please upload a valid ZIP or TAR project archive.');
+      if (selectedSource === 'upload' && uploadSubTab === 'archive') {
+        if (file.name.endsWith('.zip') || file.name.endsWith('.tar') || file.name.endsWith('.tar.gz')) {
+          setSelectedFile(file);
+          setValidationError(null);
+        } else {
+          setValidationError('Please upload a valid ZIP or TAR project archive.');
+        }
+      } else if (selectedSource === 'configuration') {
+        const validExtensions = ['.properties', '.yml', '.yaml', '.xml', '.conf', '.cfg', '.ini'];
+        const isValid = validExtensions.some(ext => file.name.toLowerCase().endsWith(ext));
+        if (isValid) {
+          setSelectedFile(file);
+          setValidationError(null);
+        } else {
+          setValidationError('Please upload a valid configuration file (.properties, .yml, .yaml, .xml, .conf, .cfg, .ini).');
+        }
+      } else if (selectedSource === 'binaries') {
+        const validExtensions = ['.jar', '.class'];
+        const isValid = validExtensions.some(ext => file.name.toLowerCase().endsWith(ext));
+        if (isValid) {
+          setSelectedFile(file);
+          setValidationError(null);
+        } else {
+          setValidationError('Please upload a valid binary file (.jar, .class).');
+        }
+      } else if (selectedSource === 'container') {
+        const validExtensions = ['.tar', '.tar.gz', '.tgz'];
+        const isValid = validExtensions.some(ext => file.name.toLowerCase().endsWith(ext));
+        if (isValid) {
+          setSelectedFile(file);
+          setValidationError(null);
+        } else {
+          setValidationError('Please upload a valid container image archive (.tar, .tar.gz, .tgz).');
+        }
       }
     }
   };
@@ -105,18 +142,59 @@ export const ScanProjectView: React.FC<ScanProjectViewProps> = ({
         onScanPath(pathInput.trim(), context);
       }
     } else if (selectedSource === 'repository') {
-      setValidationError('Git repository analysis requires backend service integration (Roadmap feature — Phase 5).');
+      if (!repositoryUrlInput.trim()) {
+        setValidationError('Please enter a repository URL.');
+        return;
+      }
+      if (!onScanRepository) {
+        setValidationError('Repository scanning is not available.');
+        return;
+      }
+      onScanRepository(repositoryUrlInput.trim(), context);
+    } else if (selectedSource === 'configuration') {
+      if (!selectedFile) {
+        setValidationError('Please choose a configuration file before starting analysis.');
+        fileInputRef.current?.click();
+        return;
+      }
+      if (!onScanConfiguration) {
+        setValidationError('Configuration file scanning is not available.');
+        return;
+      }
+      onScanConfiguration(selectedFile, context);
     } else if (selectedSource === 'binaries') {
-      setValidationError('Binary & artifact analysis is in active development (Roadmap feature — Phase 6/7).');
+      if (!selectedFile) {
+        setValidationError('Please choose a binary file before starting analysis.');
+        fileInputRef.current?.click();
+        return;
+      }
+      if (!onScanBinary) {
+        setValidationError('Binary file scanning is not available.');
+        return;
+      }
+      onScanBinary(selectedFile, context);
     } else if (selectedSource === 'container') {
-      setValidationError('Container image inspection requires container daemon integration (Roadmap feature — Phase 8).');
+      if (!selectedFile) {
+        setValidationError('Please choose a container image archive before starting analysis.');
+        fileInputRef.current?.click();
+        return;
+      }
+      if (!onScanContainer) {
+        setValidationError('Container image scanning is not available.');
+        return;
+      }
+      onScanContainer(selectedFile, context);
     }
   };
 
   const isFormValid =
-    selectedSource === 'upload' &&
-    ((uploadSubTab === 'archive' && selectedFile !== null) ||
-      (uploadSubTab === 'directory' && pathInput.trim().length > 0));
+    (selectedSource === 'upload' &&
+      ((uploadSubTab === 'archive' && selectedFile !== null) ||
+        (uploadSubTab === 'directory' && pathInput.trim().length > 0))) ||
+    (selectedSource === 'repository' && repositoryUrlInput.trim().length > 0) ||
+    (selectedSource === 'configuration' && selectedFile !== null) ||
+    (selectedSource === 'binaries' && selectedFile !== null) ||
+    (selectedSource === 'container' && selectedFile !== null);
 
   return (
     <div className="scan-page-layout">
@@ -254,7 +332,7 @@ export const ScanProjectView: React.FC<ScanProjectViewProps> = ({
                 </p>
               </div>
               <span className="scan-active-count-tag">
-                Active Source: {selectedSource === 'upload' ? (uploadSubTab === 'archive' ? 'ZIP Upload' : 'Directory Path') : selectedSource.toUpperCase()}
+                Active Source: {selectedSource === 'upload' ? (uploadSubTab === 'archive' ? 'ZIP Upload' : 'Directory Path') : selectedSource === 'configuration' ? 'Configuration File' : selectedSource === 'binaries' ? 'Binary File' : selectedSource.toUpperCase()}
               </span>
             </div>
 
@@ -283,14 +361,14 @@ export const ScanProjectView: React.FC<ScanProjectViewProps> = ({
                       <line x1="12" y1="3" x2="12" y2="15" />
                     </svg>
                   </div>
-                  <div className="source-card-selection-radio">
-                    <span className={`radio-circle ${selectedSource === 'upload' ? 'checked' : ''}`}></span>
+                  <div className="source-card-badge-wrap">
+                    <span className="source-badge-available">Available</span>
                   </div>
                 </div>
 
                 <div className="source-card-content">
                   <h3 className="source-card-title">Upload Project</h3>
-                  <p className="source-card-desc">ZIP or TAR project archive</p>
+                  <p className="source-card-desc">ZIP / TAR archive</p>
                 </div>
 
                 {selectedSource === 'upload' && (
@@ -420,6 +498,11 @@ export const ScanProjectView: React.FC<ScanProjectViewProps> = ({
                             ../test-target/src/main/java/demo
                           </button>
                         </div>
+                        <div className="source-coming-soon-note">
+                          <strong>Note:</strong> Directory-based analysis requires backend configuration
+                          (ecdat.allowed.analysis-directory). If not configured, this option will return a security error.
+                          Use ZIP upload for immediate analysis.
+                        </div>
                       </div>
                     )}
                   </div>
@@ -452,37 +535,152 @@ export const ScanProjectView: React.FC<ScanProjectViewProps> = ({
                     </svg>
                   </div>
                   <div className="source-card-badge-wrap">
-                    <span className="source-badge-roadmap">Backend integration required</span>
+                    <span className="source-badge-available">Available</span>
                   </div>
                 </div>
 
                 <div className="source-card-content">
                   <h3 className="source-card-title">Repository URL</h3>
-                  <p className="source-card-desc">Analyze a Git repository</p>
+                  <p className="source-card-desc">Git repository</p>
                 </div>
 
-                <div className="source-card-active-body" onClick={(e) => e.stopPropagation()}>
-                  <div className="source-repo-input-wrap">
-                    <input
-                      type="url"
-                      className="form-input font-mono"
-                      placeholder="Enter repository URL (e.g. https://github.com/org/repo.git)"
-                      value={repoUrl}
-                      onChange={(e) => setRepoUrl(e.target.value)}
-                    />
-                    <button
-                      type="button"
-                      className="btn-secondary btn-sm"
-                      disabled={true}
-                      title="Git repository cloning requires backend integration"
-                    >
-                      Analyze Repository
-                    </button>
+                {selectedSource === 'repository' && (
+                  <div className="source-card-active-body" onClick={(e) => e.stopPropagation()}>
+                    <div className="source-path-box">
+                      <label className="source-path-label" htmlFor="repository-url-input">
+                        Repository URL
+                      </label>
+                      <input
+                        id="repository-url-input"
+                        type="text"
+                        className="form-input font-mono"
+                        value={repositoryUrlInput}
+                        onChange={(e) => setRepositoryUrlInput(e.target.value)}
+                        placeholder="https://github.com/username/repository"
+                      />
+                      <div className="source-coming-soon-note">
+                        <strong>Note:</strong> Public Git repositories are currently supported.
+                        Private repositories requiring authentication are not supported.
+                      </div>
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
 
-              {/* CARD 3: Files & Binaries */}
+              {/* CARD 3: Configuration File */}
+              <div
+                className={`source-card ${selectedSource === 'configuration' ? 'selected' : ''}`}
+                onClick={() => {
+                  setSelectedSource('configuration');
+                  setValidationError(null);
+                }}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    setSelectedSource('configuration');
+                  }
+                }}
+              >
+                <div className="source-card-top">
+                  <div className="source-card-icon-pill indigo">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                      <polyline points="14 2 14 8 20 8" />
+                      <line x1="16" y1="13" x2="8" y2="13" />
+                      <line x1="16" y1="17" x2="8" y2="17" />
+                      <polyline points="10 9 9 9 8 9" />
+                    </svg>
+                  </div>
+                  <div className="source-card-badge-wrap">
+                    <span className="source-badge-available">Available</span>
+                  </div>
+                </div>
+
+                <div className="source-card-content">
+                  <h3 className="source-card-title">Configuration File</h3>
+                  <p className="source-card-desc">Properties / YAML / XML</p>
+                </div>
+
+                {selectedSource === 'configuration' && (
+                  <div className="source-card-active-body" onClick={(e) => e.stopPropagation()}>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept=".properties,.yml,.yaml,.xml,.conf,.cfg,.ini"
+                      style={{ display: 'none' }}
+                      onChange={handleFileChange}
+                    />
+
+                    {selectedFile ? (
+                      <div className="file-selected-box">
+                        <div className="file-selected-left">
+                          <div className="file-type-icon">
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                              <polyline points="14 2 14 8 20 8" />
+                              <line x1="16" y1="13" x2="8" y2="13" />
+                              <line x1="16" y1="17" x2="8" y2="17" />
+                              <polyline points="10 9 9 9 8 9" />
+                            </svg>
+                          </div>
+                          <div className="file-selected-meta">
+                            <span className="file-name font-mono">{selectedFile.name}</span>
+                            <span className="file-details">
+                              Configuration File • {formatFileSize(selectedFile.size)}
+                            </span>
+                            <span className="file-ready-tag">
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                                <polyline points="20 6 9 17 4 12" />
+                              </svg>
+                              Ready for analysis
+                            </span>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          className="file-remove-btn"
+                          onClick={handleRemoveFile}
+                          title="Remove selected file"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    ) : (
+                      <div
+                        className={`source-dropzone-box ${isDragOver ? 'drag-over' : ''}`}
+                        onDragOver={(e) => {
+                          e.preventDefault();
+                          setIsDragOver(true);
+                        }}
+                        onDragLeave={() => setIsDragOver(false)}
+                        onDrop={handleDrop}
+                        onClick={() => fileInputRef.current?.click()}
+                      >
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" className="dropzone-svg">
+                          <path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242" />
+                          <path d="M12 12v9" />
+                          <path d="m8 16 4-4 4 4" />
+                        </svg>
+                        <span className="dropzone-text">Drag &amp; drop configuration file here, or</span>
+                        <button
+                          type="button"
+                          className="btn-secondary btn-sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            fileInputRef.current?.click();
+                          }}
+                        >
+                          Choose File
+                        </button>
+                        <span className="dropzone-hint">Supports .properties, .yml, .yaml, .xml, .conf, .cfg, .ini up to 10MB</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* CARD 4: Binary File */}
               <div
                 className={`source-card ${selectedSource === 'binaries' ? 'selected' : ''}`}
                 onClick={() => {
@@ -498,37 +696,102 @@ export const ScanProjectView: React.FC<ScanProjectViewProps> = ({
                 }}
               >
                 <div className="source-card-top">
-                  <div className="source-card-icon-pill alert">
+                  <div className="source-card-icon-pill indigo">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <rect x="2" y="2" width="20" height="8" rx="2" ry="2" />
-                      <rect x="2" y="14" width="20" height="8" rx="2" ry="2" />
-                      <line x1="6" y1="6" x2="6.01" y2="6" />
-                      <line x1="6" y1="18" x2="6.01" y2="18" />
+                      <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" />
+                      <polyline points="14 2 14 8 20 8" />
+                      <path d="M10 13l-2 2 2 2" />
+                      <path d="M14 17l2-2-2-2" />
                     </svg>
                   </div>
                   <div className="source-card-badge-wrap">
-                    <span className="source-badge-roadmap">Coming soon</span>
+                    <span className="source-badge-available">Available</span>
                   </div>
                 </div>
 
                 <div className="source-card-content">
-                  <h3 className="source-card-title">Files &amp; Binaries</h3>
-                  <p className="source-card-desc">JAR, CLASS, configuration and certificate files</p>
+                  <h3 className="source-card-title">Binary File</h3>
+                  <p className="source-card-desc">JAR / CLASS bytecode</p>
                 </div>
 
-                <div className="source-card-active-body" onClick={(e) => e.stopPropagation()}>
-                  <button
-                    type="button"
-                    className="btn-secondary btn-sm"
-                    disabled={true}
-                    title="Direct binary selection coming in upcoming release"
-                  >
-                    Select Files
-                  </button>
-                </div>
+                {selectedSource === 'binaries' && (
+                  <div className="source-card-active-body" onClick={(e) => e.stopPropagation()}>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept=".jar,.class"
+                      style={{ display: 'none' }}
+                      onChange={handleFileChange}
+                    />
+
+                    {selectedFile ? (
+                      <div className="file-selected-box">
+                        <div className="file-selected-left">
+                          <div className="file-type-icon">
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" />
+                              <polyline points="14 2 14 8 20 8" />
+                              <path d="M10 13l-2 2 2 2" />
+                              <path d="M14 17l2-2-2-2" />
+                            </svg>
+                          </div>
+                          <div className="file-selected-meta">
+                            <span className="file-name font-mono">{selectedFile.name}</span>
+                            <span className="file-details">
+                              Binary File • {formatFileSize(selectedFile.size)}
+                            </span>
+                            <span className="file-ready-tag">
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                                <polyline points="20 6 9 17 4 12" />
+                              </svg>
+                              Ready for analysis
+                            </span>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          className="file-remove-btn"
+                          onClick={handleRemoveFile}
+                          title="Remove selected file"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    ) : (
+                      <div
+                        className={`source-dropzone-box ${isDragOver ? 'drag-over' : ''}`}
+                        onDragOver={(e) => {
+                          e.preventDefault();
+                          setIsDragOver(true);
+                        }}
+                        onDragLeave={() => setIsDragOver(false)}
+                        onDrop={handleDrop}
+                        onClick={() => fileInputRef.current?.click()}
+                      >
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" className="dropzone-svg">
+                          <path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242" />
+                          <path d="M12 12v9" />
+                          <path d="m8 16 4-4 4 4" />
+                        </svg>
+                        <span className="dropzone-text">Drag &amp; drop binary file here, or</span>
+                        <button
+                          type="button"
+                          className="btn-secondary btn-sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            fileInputRef.current?.click();
+                          }}
+                        >
+                          Choose File
+                        </button>
+                        <span className="dropzone-hint">Supports .jar and .class files up to 100MB</span>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
-              {/* CARD 4: Container Image */}
+              {/* CARD 5: Container Image */}
               <div
                 className={`source-card ${selectedSource === 'container' ? 'selected' : ''}`}
                 onClick={() => {
@@ -544,7 +807,7 @@ export const ScanProjectView: React.FC<ScanProjectViewProps> = ({
                 }}
               >
                 <div className="source-card-top">
-                  <div className="source-card-icon-pill warning">
+                  <div className="source-card-icon-pill">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
                       <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
@@ -552,25 +815,65 @@ export const ScanProjectView: React.FC<ScanProjectViewProps> = ({
                     </svg>
                   </div>
                   <div className="source-card-badge-wrap">
-                    <span className="source-badge-roadmap">Coming soon</span>
+                    <span className="source-badge-available">Available</span>
                   </div>
                 </div>
 
                 <div className="source-card-content">
                   <h3 className="source-card-title">Container Image</h3>
-                  <p className="source-card-desc">Analyze a container image or image archive</p>
+                  <p className="source-card-desc">Container image or archive (.tar, .tar.gz)</p>
                 </div>
 
-                <div className="source-card-active-body" onClick={(e) => e.stopPropagation()}>
-                  <button
-                    type="button"
-                    className="btn-secondary btn-sm"
-                    disabled={true}
-                    title="Container layer scanning coming in upcoming release"
-                  >
-                    Select Image
-                  </button>
-                </div>
+                {selectedSource === 'container' && (
+                  <div className="source-card-active-body" onClick={(e) => e.stopPropagation()}>
+                    <div className="upload-zone">
+                      <input
+                        type="file"
+                        ref={fileInputRef}
+                        onChange={handleFileChange}
+                        accept=".tar,.tar.gz,.tgz"
+                        style={{ display: 'none' }}
+                      />
+                      {selectedFile ? (
+                        <div className="selected-file-display">
+                          <div className="selected-file-info">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+                            </svg>
+                            <span className="selected-file-name">{selectedFile.name}</span>
+                            <span className="selected-file-size">({formatFileSize(selectedFile.size)})</span>
+                          </div>
+                          <button
+                            type="button"
+                            className="remove-file-btn"
+                            onClick={handleRemoveFile}
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      ) : (
+                        <div
+                          className={`upload-zone-drop ${isDragOver ? 'drag-over' : ''}`}
+                          onDragOver={(e) => {
+                            e.preventDefault();
+                            setIsDragOver(true);
+                          }}
+                          onDragLeave={() => setIsDragOver(false)}
+                          onDrop={handleDrop}
+                          onClick={() => fileInputRef.current?.click()}
+                        >
+                          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                            <polyline points="17 8 12 3 7 8" />
+                            <line x1="12" y1="3" x2="12" y2="15" />
+                          </svg>
+                          <p>Click to upload or drag and drop</p>
+                          <p className="upload-zone-hint">.tar, .tar.gz, .tgz</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -940,8 +1243,8 @@ export const ScanProjectView: React.FC<ScanProjectViewProps> = ({
                       ? selectedFile ? selectedFile.name : 'No archive selected'
                       : pathInput
                     : selectedSource === 'repository'
-                    ? repoUrl || 'No Git URL'
-                    : selectedSource.toUpperCase()}
+                    ? 'Coming soon'
+                    : 'Coming soon'}
                 </span>
               </div>
               <div className="summary-status-item">

@@ -156,7 +156,7 @@ function App() {
     setActivePage('scan');
 
     try {
-      const response = await apiService.analyzeArchive(file, context);
+      const response = await apiService.analyzeZip(file, context);
       setAnalysisData(response);
       setBackendStatus('UP');
       setActivePage('dashboard');
@@ -173,6 +173,130 @@ function App() {
       } else {
         setError({
           message: 'An unexpected error occurred during archive upload and analysis.',
+        });
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleScanRepository = async (url: string, context?: ProjectAnalysisContext) => {
+    setIsLoading(true);
+    setError(null);
+    setActiveTarget(url);
+    setActivePage('scan');
+
+    try {
+      const response = await apiService.analyzeRepository(url, context);
+      setAnalysisData(response);
+      setBackendStatus('UP');
+      setActivePage('dashboard');
+    } catch (err: unknown) {
+      if (err instanceof ApiError) {
+        setError({
+          message: err.message,
+          errorType: err.errorType,
+          status: err.status,
+        });
+        if (err.status === 0) {
+          setBackendStatus('DOWN');
+        }
+      } else {
+        setError({
+          message: 'An unexpected error occurred during repository analysis.',
+        });
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleScanConfiguration = async (file: File, context?: ProjectAnalysisContext) => {
+    setIsLoading(true);
+    setError(null);
+    setActiveTarget(file.name);
+    setActivePage('scan');
+
+    try {
+      const response = await apiService.analyzeConfigurationFile(file, context);
+      setAnalysisData(response);
+      setBackendStatus('UP');
+      setActivePage('dashboard');
+    } catch (err: unknown) {
+      if (err instanceof ApiError) {
+        setError({
+          message: err.message,
+          errorType: err.errorType,
+          status: err.status,
+        });
+        if (err.status === 0) {
+          setBackendStatus('DOWN');
+        }
+      } else {
+        setError({
+          message: 'An unexpected error occurred during configuration file analysis.',
+        });
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleScanBinary = async (file: File, context?: ProjectAnalysisContext) => {
+    setIsLoading(true);
+    setError(null);
+    setActiveTarget(file.name);
+    setActivePage('scan');
+
+    try {
+      const response = await apiService.analyzeBinaryFile(file, context);
+      setAnalysisData(response);
+      setBackendStatus('UP');
+      setActivePage('dashboard');
+    } catch (err: unknown) {
+      if (err instanceof ApiError) {
+        setError({
+          message: err.message,
+          errorType: err.errorType,
+          status: err.status,
+        });
+        if (err.status === 0) {
+          setBackendStatus('DOWN');
+        }
+      } else {
+        setError({
+          message: 'An unexpected error occurred during binary file analysis.',
+        });
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleScanContainer = async (file: File, context?: ProjectAnalysisContext) => {
+    setIsLoading(true);
+    setError(null);
+    setActiveTarget(file.name);
+    setActivePage('scan');
+
+    try {
+      const response = await apiService.analyzeContainerImage(file, context);
+      setAnalysisData(response);
+      setBackendStatus('UP');
+      setActivePage('dashboard');
+    } catch (err: unknown) {
+      if (err instanceof ApiError) {
+        setError({
+          message: err.message,
+          errorType: err.errorType,
+          status: err.status,
+        });
+        if (err.status === 0) {
+          setBackendStatus('DOWN');
+        }
+      } else {
+        setError({
+          message: 'An unexpected error occurred during container image analysis.',
         });
       }
     } finally {
@@ -265,6 +389,10 @@ function App() {
             <ScanProjectView
               onScanPath={handleScanPath}
               onScanFile={handleScanFile}
+              onScanRepository={handleScanRepository}
+              onScanConfiguration={handleScanConfiguration}
+              onScanBinary={handleScanBinary}
+              onScanContainer={handleScanContainer}
               isLoading={isLoading}
               activeTarget={activeTarget}
             />

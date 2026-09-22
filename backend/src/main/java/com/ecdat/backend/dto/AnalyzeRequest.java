@@ -9,6 +9,8 @@ public class AnalyzeRequest {
     @JsonAlias({"sourcePath", "projectPath", "dirPath"})
     private String path;
     
+    private String repositoryUrl;
+    private String applicationName;
     private ProjectAnalysisContext context;
 
     public AnalyzeRequest() {
@@ -32,6 +34,22 @@ public class AnalyzeRequest {
 
     public void setSourcePath(String sourcePath) {
         this.path = sourcePath;
+    }
+
+    public String getRepositoryUrl() {
+        return repositoryUrl;
+    }
+
+    public void setRepositoryUrl(String repositoryUrl) {
+        this.repositoryUrl = repositoryUrl;
+    }
+
+    public String getApplicationName() {
+        return applicationName;
+    }
+
+    public void setApplicationName(String applicationName) {
+        this.applicationName = applicationName;
     }
 
     public ProjectAnalysisContext getContext() {

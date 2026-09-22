@@ -114,10 +114,12 @@ Normalized filesystem abstraction:
 
 ### 3.5 `InputAdapter` & `InputAdapterRegistry`
 - `InputAdapter` interface defines `prepareWorkspace(ScanRequest request)`.
-- `ZipInputAdapter` extracts archives with Zip Slip checks and resource bounds.
-- `DirectoryInputAdapter` normalizes accessible filesystem paths.
-- `UnsupportedInputAdapter` strictly rejects planned input types with explicit phase indicators, preventing mock or fake results.
+- `ZipInputAdapter` extracts archives with Zip Slip checks and resource bounds. **TAR is advertised in the UI as a future archive format; only `.zip` is extracted in Phase 4.**
+- `DirectoryInputAdapter` normalizes accessible filesystem paths (existing `/api/analyze` path endpoint, gated by allowed-directory configuration).
+- `UnsupportedInputAdapter` strictly rejects planned input types with `UnsupportedInputException`. It never returns an empty or mock `AnalysisResponse`.
 - `InputAdapterRegistry` manages adapter discovery and resolution.
+
+`ScanWorkspace` exposes conceptual subpaths (`source/`, `binaries/`, `config/`, `certificates/`, `metadata/`) for later phases. Phase 4 does **not** create those directories unless they already exist in the extracted archive. ZIP extraction writes into the workspace root so existing Java/Maven/certificate scanners behave identically.
 
 ---
 

@@ -146,7 +146,16 @@ public class CertificateArtifactScanner {
      */
     private Integer extractKeySize(Certificate cert) {
         try {
-            return cert.getPublicKey().getEncoded().length * 8; // Approximate
+            if (cert.getPublicKey() instanceof java.security.interfaces.RSAPublicKey rsaKey) {
+                return rsaKey.getModulus().bitLength();
+            }
+            if (cert.getPublicKey() instanceof java.security.interfaces.ECPublicKey ecKey) {
+                return ecKey.getParams().getOrder().bitLength();
+            }
+            if (cert.getPublicKey() instanceof java.security.interfaces.DSAKey dsaKey) {
+                return dsaKey.getParams().getP().bitLength();
+            }
+            return cert.getPublicKey().getEncoded().length * 8; // Fallback approximate
         } catch (Exception e) {
             return null;
         }

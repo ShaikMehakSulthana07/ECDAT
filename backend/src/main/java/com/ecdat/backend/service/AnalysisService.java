@@ -5,10 +5,15 @@ import com.ecdat.backend.cbom.CBOMGenerator;
 import com.ecdat.backend.dto.AnalysisResponse;
 import com.ecdat.backend.dto.AnalysisSummary;
 import com.ecdat.backend.dto.ProjectAnalysisContext;
+import com.ecdat.backend.input.AnalysisInput;
+import com.ecdat.backend.input.AnalysisInputProcessor;
+import com.ecdat.backend.input.AnalysisInputProcessorRegistry;
+import com.ecdat.backend.input.AnalysisInputType;
 import com.ecdat.backend.input.InputAdapter;
 import com.ecdat.backend.input.InputAdapterRegistry;
 import com.ecdat.backend.input.ScanRequest;
 import com.ecdat.backend.input.ScanWorkspace;
+import com.ecdat.backend.input.UnsupportedInputException;
 import com.ecdat.backend.inventory.CryptoAsset;
 import com.ecdat.backend.inventory.CryptoInventory;
 import com.ecdat.backend.inventory.CryptoUsageCategory;
@@ -25,20 +30,31 @@ import com.ecdat.backend.risk.quantum.QuantumRiskEngine;
 import com.ecdat.backend.risk.quantum.QuantumRiskInput;
 import com.ecdat.backend.risk.quantum.QuantumRiskResult;
 import com.ecdat.backend.scanner.CertificateArtifactScanner;
-import com.ecdat.backend.scanner.MavenDependencyScanner;
-import com.ecdat.backend.scanner.certificate.CertificateArtifactFinding;
+import com.ecdat.backend.scanner.ConfigurationScanner;
 import com.ecdat.backend.scanner.CryptoFinding;
 import com.ecdat.backend.scanner.JavaSourceScanner;
+import com.ecdat.backend.scanner.MavenDependencyScanner;
+import com.ecdat.backend.scanner.binary.BinaryScanner;
+import com.ecdat.backend.scanner.configuration.ConfigurationFinding;
+import com.ecdat.backend.scanner.container.ContainerImageScanner;
+import com.ecdat.backend.scanner.certificate.CertificateArtifactFinding;
 import com.ecdat.backend.scanner.maven.MavenDependencyFinding;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 
 @Service
 public class AnalysisService {
+
+    private static final Logger logger = LoggerFactory.getLogger(AnalysisService.class);
 
     private final JavaSourceScanner scanner;
     private final InventoryClassifier inventoryClassifier;
@@ -48,6 +64,10 @@ public class AnalysisService {
     private final QuantumRiskEngine quantumRiskEngine;
     private final MavenDependencyScanner mavenDependencyScanner;
     private final CertificateArtifactScanner certificateArtifactScanner;
+    private final ConfigurationScanner configurationScanner;
+    private final BinaryScanner binaryScanner;
+    private final ContainerImageScanner containerImageScanner;
+    private final AnalysisInputProcessorRegistry processorRegistry;
     private final InputAdapterRegistry inputAdapterRegistry;
 
     public AnalysisService() {
@@ -59,13 +79,18 @@ public class AnalysisService {
         this.quantumRiskEngine = new QuantumRiskEngine();
         this.mavenDependencyScanner = new MavenDependencyScanner();
         this.certificateArtifactScanner = new CertificateArtifactScanner();
+        this.configurationScanner = new ConfigurationScanner();
+        this.binaryScanner = new BinaryScanner();
+        this.containerImageScanner = new ContainerImageScanner();
+        this.processorRegistry = new AnalysisInputProcessorRegistry();
         this.inputAdapterRegistry = new InputAdapterRegistry();
     }
 
     public AnalysisService(JavaSourceScanner scanner, RiskEngine riskEngine,
                            PQCRecommendationEngine pqcEngine, CBOMGenerator cbomGenerator,
                            QuantumRiskEngine quantumRiskEngine, MavenDependencyScanner mavenDependencyScanner,
-                           CertificateArtifactScanner certificateArtifactScanner) {
+                           CertificateArtifactScanner certificateArtifactScanner,
+                           ConfigurationScanner configurationScanner) {
         this.scanner = scanner;
         this.inventoryClassifier = new InventoryClassifier();
         this.riskEngine = riskEngine;
@@ -74,22 +99,10 @@ public class AnalysisService {
         this.quantumRiskEngine = quantumRiskEngine;
         this.mavenDependencyScanner = mavenDependencyScanner;
         this.certificateArtifactScanner = certificateArtifactScanner;
-        this.inputAdapterRegistry = new InputAdapterRegistry();
-    }
-
-    public AnalysisService(JavaSourceScanner scanner, InventoryClassifier inventoryClassifier,
-                           RiskEngine riskEngine, PQCRecommendationEngine pqcEngine,
-                           CBOMGenerator cbomGenerator, QuantumRiskEngine quantumRiskEngine,
-                           MavenDependencyScanner mavenDependencyScanner,
-                           CertificateArtifactScanner certificateArtifactScanner) {
-        this.scanner = scanner;
-        this.inventoryClassifier = inventoryClassifier;
-        this.riskEngine = riskEngine;
-        this.pqcEngine = pqcEngine;
-        this.cbomGenerator = cbomGenerator;
-        this.quantumRiskEngine = quantumRiskEngine;
-        this.mavenDependencyScanner = mavenDependencyScanner;
-        this.certificateArtifactScanner = certificateArtifactScanner;
+        this.configurationScanner = configurationScanner != null ? configurationScanner : new ConfigurationScanner();
+        this.binaryScanner = new BinaryScanner();
+        this.containerImageScanner = new ContainerImageScanner();
+        this.processorRegistry = new AnalysisInputProcessorRegistry();
         this.inputAdapterRegistry = new InputAdapterRegistry();
     }
 
@@ -98,7 +111,7 @@ public class AnalysisService {
                            CBOMGenerator cbomGenerator, QuantumRiskEngine quantumRiskEngine,
                            MavenDependencyScanner mavenDependencyScanner,
                            CertificateArtifactScanner certificateArtifactScanner,
-                           InputAdapterRegistry inputAdapterRegistry) {
+                           ConfigurationScanner configurationScanner) {
         this.scanner = scanner;
         this.inventoryClassifier = inventoryClassifier;
         this.riskEngine = riskEngine;
@@ -107,57 +120,146 @@ public class AnalysisService {
         this.quantumRiskEngine = quantumRiskEngine;
         this.mavenDependencyScanner = mavenDependencyScanner;
         this.certificateArtifactScanner = certificateArtifactScanner;
-        this.inputAdapterRegistry = inputAdapterRegistry != null ? inputAdapterRegistry : new InputAdapterRegistry();
+        this.configurationScanner = configurationScanner != null ? configurationScanner : new ConfigurationScanner();
+        this.binaryScanner = new BinaryScanner();
+        this.containerImageScanner = new ContainerImageScanner();
+        this.processorRegistry = new AnalysisInputProcessorRegistry();
+        this.inputAdapterRegistry = new InputAdapterRegistry();
+    }
+
+    public AnalysisService(JavaSourceScanner scanner, InventoryClassifier inventoryClassifier,
+                           RiskEngine riskEngine, PQCRecommendationEngine pqcEngine,
+                           CBOMGenerator cbomGenerator, QuantumRiskEngine quantumRiskEngine,
+                           MavenDependencyScanner mavenDependencyScanner,
+                           CertificateArtifactScanner certificateArtifactScanner,
+                           ConfigurationScanner configurationScanner,
+                           AnalysisInputProcessorRegistry processorRegistry) {
+        this.scanner = scanner;
+        this.inventoryClassifier = inventoryClassifier;
+        this.riskEngine = riskEngine;
+        this.pqcEngine = pqcEngine;
+        this.cbomGenerator = cbomGenerator;
+        this.quantumRiskEngine = quantumRiskEngine;
+        this.mavenDependencyScanner = mavenDependencyScanner;
+        this.certificateArtifactScanner = certificateArtifactScanner;
+        this.configurationScanner = configurationScanner != null ? configurationScanner : new ConfigurationScanner();
+        this.binaryScanner = new BinaryScanner();
+        this.containerImageScanner = new ContainerImageScanner();
+        this.processorRegistry = processorRegistry != null ? processorRegistry : new AnalysisInputProcessorRegistry();
+        this.inputAdapterRegistry = new InputAdapterRegistry();
     }
 
     /**
-     * Executes the multi-input discovery pipeline for a given ScanRequest.
-     * Routes the request to the matching InputAdapter, sets up the normalized ScanWorkspace,
-     * runs analysis, and cleans up resources.
+     * Executes the multi-input discovery pipeline for a given unified AnalysisInput.
      *
-     * @param request the scan request specifying input type and source details
+     * @param input the analysis input specifying input type, source, and context
      * @return integrated AnalysisResponse
      */
-    public AnalysisResponse analyze(ScanRequest request) {
-        if (request == null) {
-            throw new IllegalArgumentException("Scan request must not be null.");
+    public AnalysisResponse analyze(AnalysisInput input) {
+        if (input == null) {
+            throw new IllegalArgumentException("Analysis input must not be null.");
         }
 
-        InputAdapter adapter = inputAdapterRegistry.getAdapter(request.getInputType());
-        ProjectAnalysisContext context = request.getContext();
+        if (input.getInputType() == null) {
+            throw new IllegalArgumentException("Analysis input must include an input type.");
+        }
+
+        AnalysisInputProcessor processor = processorRegistry.getProcessor(input.getInputType());
+        ProjectAnalysisContext context = input.getContext();
         if (context == null) {
             context = new ProjectAnalysisContext();
         }
 
-        try (ScanWorkspace workspace = adapter.prepareWorkspace(request)) {
-            return executePipeline(workspace.getSourcePath().toString(), request.getSourceIdentifier(), context);
+        try (ScanWorkspace workspace = processor.process(input)) {
+            AnalysisResponse response = executePipeline(
+                    workspace.getSourcePath().toString(),
+                    input.getSourceIdentifier(),
+                    context
+            );
+            response.setInputType(input.getInputType().name());
+            response.setInputName(input.getOriginalName());
+            response.setInputSource(input.getSourceIdentifier());
+            return response;
+        } catch (UnsupportedInputException e) {
+            throw e;
         } catch (IOException e) {
             throw new RuntimeException("Failed to process scan workspace: " + e.getMessage(), e);
         }
     }
 
     /**
+     * Legacy adapter method for ScanRequest.
+     */
+    public AnalysisResponse analyze(ScanRequest request) {
+        if (request == null) {
+            throw new IllegalArgumentException("Scan request must not be null.");
+        }
+
+        if (request.getInputType() == null) {
+            throw new IllegalArgumentException("Scan request must include an input type.");
+        }
+
+        AnalysisInputType analysisType = request.getInputType().toAnalysisInputType();
+        AnalysisInput input = new AnalysisInput(analysisType, request.getSourceIdentifier());
+        input.setArchiveFile(request.getArchiveFile());
+        input.setSourceFile(request.getArchiveFile());
+        input.setConfigurationFile(request.getArchiveFile());
+        input.setBinaryFile(request.getArchiveFile());
+        input.setDirectoryPath(request.getDirectoryPath());
+        input.setRepositoryUrl(request.getRepositoryUrl());
+        input.setProjectName(request.getProjectName());
+        input.setContext(request.getContext());
+        input.setScopes(request.getScopes());
+
+        return analyze(input);
+    }
+
+    /**
      * Executes the end-to-end cryptographic analysis pipeline on a target source directory.
-     *
-     * @param sourcePath directory path containing source files
-     * @param context project analysis context for quantum risk assessment
-     * @return integrated AnalysisResponse containing findings, risk assessments, PQC recommendations, inventory, and CBOM
      */
     public AnalysisResponse analyzeDirectory(String sourcePath, ProjectAnalysisContext context) {
-        ScanRequest request = ScanRequest.forDirectory(sourcePath, context);
-        return analyze(request);
+        AnalysisInput input = AnalysisInput.forDirectory(sourcePath, context);
+        return analyze(input);
     }
 
     /**
      * Extracts an uploaded zip archive safely and executes the cryptographic analysis pipeline.
-     *
-     * @param file uploaded zip archive
-     * @param context project analysis context for quantum risk assessment
-     * @return integrated AnalysisResponse
      */
     public AnalysisResponse analyzeArchive(MultipartFile file, ProjectAnalysisContext context) {
-        ScanRequest request = ScanRequest.forZip(file, context);
-        return analyze(request);
+        AnalysisInput input = AnalysisInput.forZip(file, context);
+        return analyze(input);
+    }
+
+    /**
+     * Analyzes an uploaded single source file (.java) safely and executes the Java AST scanner.
+     */
+    public AnalysisResponse analyzeSourceFile(MultipartFile file, ProjectAnalysisContext context) {
+        AnalysisInput input = AnalysisInput.forSourceFile(file, context);
+        return analyze(input);
+    }
+
+    /**
+     * Analyzes an uploaded configuration file (.properties, .yml, .yaml, .xml, .conf, .cfg, .ini).
+     */
+    public AnalysisResponse analyzeConfigurationFile(MultipartFile file, ProjectAnalysisContext context) {
+        AnalysisInput input = AnalysisInput.forConfiguration(file, context);
+        return analyze(input);
+    }
+
+    /**
+     * Analyzes an uploaded binary file (.jar, .class).
+     */
+    public AnalysisResponse analyzeBinaryFile(MultipartFile file, ProjectAnalysisContext context) {
+        AnalysisInput input = AnalysisInput.forBinary(file, context);
+        return analyze(input);
+    }
+
+    /**
+     * Analyzes an uploaded container image archive (.tar, .tar.gz, .tgz).
+     */
+    public AnalysisResponse analyzeContainerFile(MultipartFile file, ProjectAnalysisContext context) {
+        AnalysisInput input = AnalysisInput.forContainer(file, context);
+        return analyze(input);
     }
 
     /**
@@ -178,6 +280,71 @@ public class AnalysisService {
 
         // Phase 1.6 — Certificate/Key Artifact Discovery
         List<CertificateArtifactFinding> certificateFindings = certificateArtifactScanner.scanDirectory(scanDirectory);
+
+        // Phase 1.7 — Configuration File Discovery
+        List<ConfigurationFinding> configurationFindings = configurationScanner.scanDirectory(scanDirectory);
+        List<CryptoFinding> configurationCryptoFindings = configurationScanner.convertToCryptoFindings(configurationFindings);
+        findings.addAll(configurationCryptoFindings);
+
+        // Phase 1.8 — Binary File Discovery (JAR/CLASS)
+        try {
+            Path scanPath = Paths.get(scanDirectory);
+            if (Files.isDirectory(scanPath)) {
+                List<CryptoFinding> binaryFindings = binaryScanner.scanDirectory(scanPath);
+                findings.addAll(binaryFindings);
+            }
+        } catch (IOException e) {
+            // Log but don't fail the entire analysis if binary scanning fails
+            logger.warn("Binary file scanning failed: {}", e.getMessage());
+        }
+
+        // Phase 1.9 — Container Image Discovery (if input is container)
+        try {
+            Path scanPath = Paths.get(scanDirectory);
+            if (Files.isDirectory(scanPath)) {
+                // Check if this is a container image by looking for manifest.json
+                Path manifestPath = scanPath.resolve("manifest.json");
+                if (Files.exists(manifestPath)) {
+                    logger.info("Container image detected, scanning artifacts...");
+                    List<CryptoFinding> containerFindings = containerImageScanner.scanExtractedImage(scanPath, displayPath);
+                    findings.addAll(containerFindings);
+                    logger.info("Container image scan added {} findings", containerFindings.size());
+                }
+            }
+        } catch (IOException e) {
+            // Log but don't fail the entire analysis if container scanning fails
+            logger.warn("Container image scanning failed: {}", e.getMessage());
+        }
+
+        // Apply business context to findings
+        try {
+            Path scanPath = Paths.get(scanDirectory);
+            if (Files.isDirectory(scanPath)) {
+                List<CryptoFinding> binaryFindings = binaryScanner.scanDirectory(scanPath);
+                findings.addAll(binaryFindings);
+            }
+        } catch (IOException e) {
+            // Log but don't fail the entire analysis if binary scanning fails
+            logger.warn("Binary file scanning failed: {}", e.getMessage());
+        }
+
+        // Phase 1.9 — Container Image Discovery (if input is container)
+        try {
+            Path scanPath = Paths.get(scanDirectory);
+            if (Files.isDirectory(scanPath)) {
+                // Check if this is a container image by looking for manifest.json
+                Path manifestPath = scanPath.resolve("manifest.json");
+                if (Files.exists(manifestPath)) {
+                    logger.info("Container image detected, scanning artifacts...");
+                    List<CryptoFinding> containerFindings = containerImageScanner.scanExtractedImage(scanPath, displayPath);
+                    findings.addAll(containerFindings);
+                    logger.info("Container image scan added {} findings", containerFindings.size());
+                }
+            }
+        } catch (IOException e) {
+            // Log but don't fail the entire analysis if container scanning fails
+            logger.warn("Container image scanning failed: {}", e.getMessage());
+        }
 
         // Apply business context to findings
         applyContextToFindings(findings, context);
@@ -235,6 +402,7 @@ public class AnalysisService {
                 summary
         ).withContext(context);
         response.setCertificateFindings(certificateFindings);
+        response.setConfigurationFindings(configurationFindings);
         return response;
     }
 
@@ -248,7 +416,7 @@ public class AnalysisService {
 
         // Create a map of crypto library names for quick lookup
         for (CryptoFinding finding : findings) {
-            if (finding.getLibrary() == null || finding.getLibrary().isEmpty()) {
+            if (finding.getLibrary() == null || finding.getLibrary().isEmpty() || "Java Cryptography Architecture (JCA)".equals(finding.getLibrary())) {
                 // Try to match with known crypto libraries from dependencies
                 for (MavenDependencyFinding depFinding : dependencyFindings) {
                     if (depFinding.isCryptoRelated() && depFinding.getCryptoLibraryName() != null) {
@@ -257,11 +425,6 @@ public class AnalysisService {
                         finding.setSourceType("JAVA_AST_MAVEN");
                         break;
                     }
-                }
-                
-                // If no match found, mark as unknown
-                if (finding.getLibrary() == null || finding.getLibrary().isEmpty()) {
-                    finding.setLibrary("UNKNOWN");
                 }
             }
         }
@@ -276,7 +439,6 @@ public class AnalysisService {
         }
         
         for (CryptoFinding finding : findings) {
-            // Always apply context values if context is provided
             finding.setBusinessCriticality(context.getBusinessCriticality());
             finding.setDataSensitivity(context.getDataSensitivity());
         }
@@ -363,6 +525,10 @@ public class AnalysisService {
                 unknownLifecycleCount,
                 directUsageCount
         );
+    }
+
+    public AnalysisInputProcessorRegistry getProcessorRegistry() {
+        return processorRegistry;
     }
 
     public InputAdapterRegistry getInputAdapterRegistry() {

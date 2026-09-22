@@ -123,10 +123,47 @@ The frontend will start on `http://localhost:5173`
 - ✅ React dashboard inventory filtering, lifecycle badges, and detailed classification inspection
 - ✅ Comprehensive inventory classification test suite with negative tests (104 backend tests total)
 
+### Completed (Phase 4 - Multi-Input Architecture Foundation)
+- ✅ Unified input type enumeration (`AnalysisInputType`) with clear supported/roadmap status
+- ✅ Normalized analysis request model (`AnalysisInput`) supporting multiple input sources
+- ✅ Normalized artifact representation (`DiscoveredArtifact`) for cross-input consistency
+- ✅ Extensible input processor interface (`AnalysisInputProcessor`)
+- ✅ Implemented processors: `ZipInputProcessor`, `SourceFileInputProcessor`, `DirectoryInputProcessor`, `RepositoryInputProcessor`
+- ✅ Explicit unsupported processors for roadmap types: `UnsupportedInputProcessor` (Configuration, Binary, Container)
+- ✅ Processor registry with capability discovery (`AnalysisInputProcessorRegistry`)
+- ✅ Capabilities endpoint (`GET /api/analyze/capabilities`) returning supported/roadmap status
+- ✅ AnalysisResponse enriched with input metadata (inputType, inputName, inputSource)
+- ✅ Frontend TypeScript types for multi-input architecture
+- ✅ Frontend Scan Project UI with accurate capability states (Available vs Coming Soon)
+- ✅ Frontend API service with capability discovery and fallback capabilities
+- ✅ Comprehensive backend tests for input processing architecture (Zip Slip, archive limits, unsupported types)
+- ✅ Frontend API tests for capability discovery and unsupported endpoints
+- ✅ Bug fix: InventoryClassifier now handles JAVA_AST_MAVEN and JAVA_AST_* source types correctly using startsWith()
+- ✅ Bug fix verified: Certificate RSA key size uses modulus bit length (rsaKey.getModulus().bitLength())
+- ✅ Frontend UI update: Directory Path input now includes configuration requirement note
+
+### Completed (Phase 5 - Repository URL Scanning)
+- ✅ URL validation (`RepositoryUrlValidator`) with HTTPS enforcement, credential rejection, and normalization
+- ✅ SSRF protection (`SsrfProtection`) with DNS resolution, IP address validation, and private range blocking
+- ✅ Secure Git acquisition (`RepositoryAcquisition`) via ProcessBuilder with shallow clone and timeout
+- ✅ Resource limits configuration (clone timeout, max repo size, file count, file size)
+- ✅ Repository-specific error types (`RepositoryAnalysisException`) with structured error codes
+- ✅ `RepositoryInputProcessor` implementing the multi-input architecture
+- ✅ Registry updated to register `RepositoryInputProcessor` instead of `UnsupportedInputProcessor`
+- ✅ `AnalysisInputType.REPOSITORY_URL` supported flag set to `true`
+- ✅ New API endpoint `POST /api/analyze/repository` using `AnalysisService.analyze()`
+- ✅ Frontend Scan Project UI enabled Repository URL card with input field
+- ✅ Frontend API service updated to call new repository endpoint
+- ✅ Security tests (URL validation, SSRF with DNS/redirects, Git detection)
+- ✅ Workspace cleanup tests
+- ✅ Backend regression tests: 231/231 passed (baseline 179/179)
+- ✅ Frontend regression tests: 32/32 passed
+- ✅ Production frontend build successful
+
 ### Not Yet Implemented
-- ❌ Certificate analysis
-- ❌ Dependency scanning
-- ❌ Configuration scanning
+- ❌ Configuration file scanning (Planned for Phase 6)
+- ❌ JAR/CLASS binary scanning (Planned for Phase 7)
+- ❌ Container image scanning (Planned for Phase 8)
 - ❌ Authentication and authorization
 - ❌ Database persistence
 - ❌ Automated source-code migration

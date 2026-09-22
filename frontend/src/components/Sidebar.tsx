@@ -48,7 +48,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </div>
           {!isCollapsed && (
             <div className="sidebar-brand-text">
-              <span className="sidebar-brand-title">ECDAT</span>
+              <span className="sidebar-brand-title">CRYPTAGUARD</span>
               <span className="sidebar-brand-sub">Enterprise Security</span>
             </div>
           )}
@@ -70,7 +70,22 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </button>
       </div>
 
-      {/* 2. User Profile Capsule (Matching Image 1 Sidebar layout) */}
+      {/* 2. New Scan Button */}
+      {!isCollapsed && (
+        <button
+          className="sidebar-new-scan-btn"
+          onClick={() => onNavigate('scan')}
+          title="Start a new project scan"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <line x1="12" y1="5" x2="12" y2="19" />
+            <line x1="5" y1="12" x2="19" y2="12" />
+          </svg>
+          <span>New Scan</span>
+        </button>
+      )}
+
+      {/* 3. User Profile Capsule (Matching Image 1 Sidebar layout) */}
       {!isCollapsed && (
         <div className="sidebar-user-capsule" onClick={() => onNavigate('settings')} title="View user profile & settings">
           <div className="sidebar-user-avatar">
@@ -91,9 +106,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </div>
       )}
 
-      {/* 3. Main Navigation List */}
+      {/* 4. Main Navigation List */}
       <nav className="sidebar-nav">
-        <div className="nav-section-title">Main Navigation</div>
+        <div className="nav-section-title">CORE ANALYSIS</div>
 
         <button
           className={`nav-item-btn ${activePage === 'dashboard' ? 'active' : ''}`}
@@ -179,7 +194,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           {!isCollapsed && <span className="nav-item-label">Dependencies</span>}
         </button>
 
-        <div className="nav-section-title" style={{ marginTop: '12px' }}>Quantum &amp; Standards</div>
+        <div className="nav-section-title" style={{ marginTop: '12px' }}>QUANTUM POSTURE</div>
 
         <button
           className={`nav-item-btn ${activePage === 'quantum' ? 'active' : ''}`}

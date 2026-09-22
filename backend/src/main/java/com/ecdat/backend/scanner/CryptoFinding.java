@@ -36,6 +36,11 @@ public class CryptoFinding {
     private String protocol;
     private String library;
 
+    // Container-specific provenance fields (Phase 8)
+    private String containerImage;
+    private String layerId;
+    private String artifactName;
+
     // Getters and Setters
     public String getAlgorithm() { return algorithm; }
     public void setAlgorithm(String algorithm) { this.algorithm = algorithm; }
@@ -70,4 +75,12 @@ public class CryptoFinding {
     public void setProtocol(String protocol) { this.protocol = protocol; }
     public String getLibrary() { return library; }
     public void setLibrary(String library) { this.library = library; }
+
+    // Container provenance getters/setters
+    public String getContainerImage() { return containerImage; }
+    public void setContainerImage(String containerImage) { this.containerImage = containerImage; }
+    public String getLayerId() { return layerId; }
+    public void setLayerId(String layerId) { this.layerId = layerId; }
+    public String getArtifactName() { return artifactName; }
+    public void setArtifactName(String artifactName) { this.artifactName = artifactName; }
 }

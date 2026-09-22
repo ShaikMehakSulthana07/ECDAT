@@ -34,4 +34,20 @@ public class JavaSourceScanner {
         }
         return allFindings;
     }
+
+    /**
+     * Scans a single Java source file.
+     * Used for container image scanning where individual files are discovered.
+     */
+    public List<CryptoFinding> scanFile(Path javaFile) {
+        List<CryptoFinding> findings = new ArrayList<>();
+        try {
+            CompilationUnit cu = StaticJavaParser.parse(javaFile);
+            CryptoScanner visitor = new CryptoScanner(javaFile.getFileName().toString());
+            visitor.visit(cu, findings);
+        } catch (Exception e) {
+            System.err.println("Failed to scan Java file: " + javaFile + " - " + e.getMessage());
+        }
+        return findings;
+    }
 }

@@ -1,0 +1,26 @@
+server:
+  ssl:
+    enabled: true
+    protocol: TLSv1.2
+    enabled-protocols:
+      - TLSv1.2
+      - TLSv1.3
+    ciphers:
+      - TLS_RSA_WITH_AES_128_CBC_SHA
+      - TLS_RSA_WITH_AES_256_CBC_SHA
+    key-store: classpath:keystore.jks
+    key-store-password: TEST_ONLY_NOT_A_REAL_SECRET
+    key-alias: test-alias
+
+crypto:
+  algorithm: RSA
+  key-size: 2048
+  hash: SHA-256
+  cipher: AES/GCM/NoPadding
+  signature: SHA256withRSA
+  tls-protocol: TLSv1.2
+
+# Test configuration - NO REAL SECRETS
+test:
+  mode: fixture-only
+  purpose: CRYPTAGUARD_STATIC_ANALYSIS_TESTING

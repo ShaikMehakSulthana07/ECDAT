@@ -19,6 +19,28 @@ public class InputAdapterRegistry {
         registerAdapter(new ZipInputAdapter());
         registerAdapter(new DirectoryInputAdapter());
 
+        // Register Source File adapter
+        registerAdapter(new InputAdapter() {
+            private final SourceFileInputProcessor processor = new SourceFileInputProcessor();
+
+            @Override
+            public ScanInputType getInputType() {
+                return ScanInputType.SOURCE_FILE;
+            }
+
+            @Override
+            public boolean supports(ScanInputType type) {
+                return type == ScanInputType.SOURCE_FILE;
+            }
+
+            @Override
+            public ScanWorkspace prepareWorkspace(ScanRequest request) throws java.io.IOException {
+                AnalysisInput input = AnalysisInput.forSourceFile(request.getArchiveFile(), request.getContext());
+                input.setScopes(request.getScopes());
+                return processor.process(input);
+            }
+        });
+
         // Register explicit unsupported adapters
         registerAdapter(UnsupportedInputAdapter.forGitRepository());
         registerAdapter(UnsupportedInputAdapter.forFiles());
@@ -26,6 +48,11 @@ public class InputAdapterRegistry {
         registerAdapter(UnsupportedInputAdapter.forClass());
         registerAdapter(UnsupportedInputAdapter.forConfiguration());
         registerAdapter(UnsupportedInputAdapter.forContainer());
+
+        // Aliases
+        adapters.put(ScanInputType.REPOSITORY_URL, adapters.get(ScanInputType.GIT_REPOSITORY));
+        adapters.put(ScanInputType.CONFIGURATION_FILE, adapters.get(ScanInputType.CONFIGURATION));
+        adapters.put(ScanInputType.BINARY_FILE, adapters.get(ScanInputType.JAR));
     }
 
     public InputAdapterRegistry(List<InputAdapter> customAdapters) {

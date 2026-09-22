@@ -238,6 +238,9 @@ export interface AnalysisSummary {
 export interface AnalysisResponse {
   status: string;
   sourcePath: string;
+  inputType?: string;
+  inputName?: string;
+  inputSource?: string;
   findings: CryptoFinding[];
   riskAssessments: RiskAssessment[];
   pqcRecommendations: PQCRecommendation[];
@@ -317,14 +320,39 @@ export interface ErrorResponse {
 }
 
 // Phase 4 Multi-Input Scan Architecture Types
+export type AnalysisInputType =
+  | 'ZIP_ARCHIVE'
+  | 'SOURCE_FILE'
+  | 'DIRECTORY'
+  | 'REPOSITORY_URL'
+  | 'CONFIGURATION_FILE'
+  | 'BINARY_FILE'
+  | 'CONTAINER_IMAGE';
+
+export interface InputCapability {
+  type: string;
+  supported: boolean;
+  displayName: string;
+  description: string;
+  plannedPhase?: string;
+}
+
+export interface CapabilitiesResponse {
+  inputs: InputCapability[];
+}
+
 export type ScanInputType =
   | 'ZIP_ARCHIVE'
+  | 'SOURCE_FILE'
   | 'DIRECTORY'
   | 'GIT_REPOSITORY'
+  | 'REPOSITORY_URL'
   | 'FILES'
   | 'JAR'
   | 'CLASS'
   | 'CONFIGURATION'
+  | 'CONFIGURATION_FILE'
+  | 'BINARY_FILE'
   | 'CONTAINER_IMAGE';
 
 export type AnalysisScopeType =
@@ -338,6 +366,17 @@ export type AnalysisScopeType =
 export interface ScanRequest {
   inputType: ScanInputType;
   sourceIdentifier: string;
+  directoryPath?: string;
+  repositoryUrl?: string;
+  projectName?: string;
+  context?: ProjectAnalysisContext;
+  scopes?: AnalysisScopeType[];
+}
+
+export interface AnalysisInput {
+  inputType: AnalysisInputType;
+  originalName: string;
+  sourceIdentifier?: string;
   directoryPath?: string;
   repositoryUrl?: string;
   projectName?: string;

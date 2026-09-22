@@ -43,7 +43,7 @@ export const TopBar: React.FC<TopBarProps> = ({
     <header className="topbar">
       <div className="topbar-left">
         <div className="breadcrumb-trail">
-          <span>ECDAT</span>
+          <span>CRYPTAGUARD</span>
           <span className="breadcrumb-sep">/</span>
           <span className="breadcrumb-active">{pageTitles[activePage] || 'Overview'}</span>
           {targetPath && (

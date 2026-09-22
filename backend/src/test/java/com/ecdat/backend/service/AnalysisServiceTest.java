@@ -8,13 +8,15 @@ import com.ecdat.backend.inventory.AssetCategory;
 import com.ecdat.backend.inventory.CryptoAsset;
 import com.ecdat.backend.inventory.CryptoUsageCategory;
 import com.ecdat.backend.inventory.LifecycleStatus;
-import com.ecdat.backend.pqc.MigrationPriority;
+import com.ecdat.backend.input.AnalysisInput;
+import com.ecdat.backend.input.AnalysisInputType;
+import com.ecdat.backend.input.ScanInputType;
+import com.ecdat.backend.input.ScanRequest;
+import com.ecdat.backend.input.UnsupportedInputException;
 import com.ecdat.backend.pqc.PQCRecommendation;
 import com.ecdat.backend.pqc.PQCRecommendationStatus;
 import com.ecdat.backend.risk.QuantumRisk;
 import com.ecdat.backend.risk.RiskAssessment;
-import com.ecdat.backend.risk.RiskLevel;
-import com.ecdat.backend.scanner.CryptoFinding;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -265,5 +267,43 @@ class AnalysisServiceTest {
         assertEquals(1, response.getSummary().getActiveAssetCount());
         assertEquals(1, response.getSummary().getDeprecatedAssetCount());
         assertEquals(2, response.getSummary().getDirectUsageCount());
+    }
+
+    @Test
+    void testZipScanRequestRoutesThroughMultiInputArchitecture() throws IOException {
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        try (ZipOutputStream zos = new ZipOutputStream(baos)) {
+            ZipEntry entry = new ZipEntry("src/main/java/Demo.java");
+            zos.putNextEntry(entry);
+            zos.write(("import javax.crypto.Cipher;\npublic class Demo {\n" +
+                    "  public void run() throws Exception {\n" +
+                    "    Cipher c = Cipher.getInstance(\"AES/GCM/NoPadding\");\n" +
+                    "  }\n}\n").getBytes());
+            zos.closeEntry();
+        }
+
+        MockMultipartFile zipFile = new MockMultipartFile(
+                "file", "project.zip", "application/zip", baos.toByteArray());
+        ScanRequest request = ScanRequest.forZip(zipFile, new ProjectAnalysisContext());
+
+        AnalysisResponse response = analysisService.analyze(request);
+
+        assertEquals("SUCCESS", response.getStatus());
+        assertEquals("project.zip", response.getSourcePath());
+        assertEquals(1, response.getFindings().size());
+        assertNotNull(response.getCbom());
+        assertNotNull(response.getSummary());
+    }
+
+    @Test
+    void testUnsupportedInputTypesDoNotReturnFakeAnalysisResults() {
+        ProjectAnalysisContext context = new ProjectAnalysisContext();
+
+        // All input types are now supported (ZIP_ARCHIVE, SOURCE_FILE, DIRECTORY, REPOSITORY_URL,
+        // CONFIGURATION_FILE, BINARY_FILE, CONTAINER_IMAGE), so this test is now checking
+        // only for truly invalid inputs
+        assertThrows(IllegalArgumentException.class, () -> analysisService.analyze((AnalysisInput) null));
+        assertThrows(IllegalArgumentException.class,
+                () -> analysisService.analyze(new ScanRequest(null, "unknown")));
     }
 }

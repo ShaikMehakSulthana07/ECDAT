@@ -161,8 +161,9 @@ public class InventoryClassifier {
             return CryptoUsageCategory.UNKNOWN;
         }
 
-        // Direct AST method call invocation (e.g., Cipher.getInstance(...))
-        if ("JAVA_AST".equalsIgnoreCase(sourceType) || sourceType == null) {
+        // Direct AST method call invocation (e.g., Cipher.getInstance(...), enriched with Maven metadata)
+        // Handles JAVA_AST, JAVA_AST_MAVEN, and other JAVA_AST_* variants
+        if (sourceType == null || sourceType.toUpperCase().startsWith("JAVA_AST")) {
             return CryptoUsageCategory.DIRECT_USAGE;
         }
 

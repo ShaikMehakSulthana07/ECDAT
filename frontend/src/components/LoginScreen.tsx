@@ -36,9 +36,9 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
               <path d="m9 12 2 2 4-4" />
             </svg>
           </div>
-          <h1 className="auth-hero-title">ECDAT</h1>
+          <h1 className="auth-hero-title">CRYPTAGUARD</h1>
           <p className="auth-hero-subtitle">
-            Enterprise Cryptographic Discovery &amp; Analysis Tool
+            Enterprise Cryptographic Discovery &amp; Quantum Risk Intelligence
           </p>
           <div className="auth-hero-tagline">
             Discover, Analyze, Secure, Quantum Ready.
@@ -50,7 +50,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
       <div className="auth-form-panel">
         <div className="auth-form-card">
           <div className="auth-card-header">
-            <h2 className="auth-card-title">Welcome to ECDAT</h2>
+            <h2 className="auth-card-title">Welcome to CRYPTAGUARD</h2>
             <p className="auth-card-subtitle">
               Sign in to access your security analysis workspace
             </p>

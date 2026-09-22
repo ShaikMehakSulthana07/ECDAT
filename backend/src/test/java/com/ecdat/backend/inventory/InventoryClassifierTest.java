@@ -204,6 +204,42 @@ class InventoryClassifierTest {
     }
 
     @Test
+    @DisplayName("Classify JAVA_AST_MAVEN as DIRECT_USAGE (Known Fix #1)")
+    void testClassifyJavaAstmavenAsDirectUsage() {
+        CryptoFinding finding = new CryptoFinding();
+        finding.setAlgorithm("AES");
+        finding.setPurpose(CryptoFinding.Purpose.ENCRYPTION);
+        finding.setFile("pom.xml");
+        finding.setLine(0);
+        finding.setEvidence("Maven dependency");
+        finding.setConfidence(CryptoFinding.Confidence.HIGH);
+        finding.setSourceType("JAVA_AST_MAVEN");
+
+        CryptoAsset asset = classifier.classify(finding);
+
+        assertNotNull(asset);
+        assertEquals(CryptoUsageCategory.DIRECT_USAGE, asset.getUsageCategory());
+    }
+
+    @Test
+    @DisplayName("Classify JAVA_AST_MAVEN_ENHANCED as DIRECT_USAGE (Known Fix #1)")
+    void testClassifyJavaAstmavenEnhancedAsDirectUsage() {
+        CryptoFinding finding = new CryptoFinding();
+        finding.setAlgorithm("RSA");
+        finding.setPurpose(CryptoFinding.Purpose.KEY_GENERATION);
+        finding.setFile("pom.xml");
+        finding.setLine(0);
+        finding.setEvidence("Maven dependency with metadata");
+        finding.setConfidence(CryptoFinding.Confidence.HIGH);
+        finding.setSourceType("JAVA_AST_MAVEN_ENHANCED");
+
+        CryptoAsset asset = classifier.classify(finding);
+
+        assertNotNull(asset);
+        assertEquals(CryptoUsageCategory.DIRECT_USAGE, asset.getUsageCategory());
+    }
+
+    @Test
     @DisplayName("Classify TLS as TLS_PROTOCOL, ACTIVE, with JSSE library and protocol variant")
     void testClassifyTLS() {
         CryptoFinding finding = new CryptoFinding();
@@ -439,5 +475,27 @@ class InventoryClassifierTest {
         assertEquals(PQCRecommendationStatus.CONDITIONAL, md5Rec.getRecommendationStatus());
         assertTrue(md5Rec.getAlternativeAlgorithms().contains("SHA-256"));
         assertEquals(MigrationPriority.CRITICAL, md5Rec.getMigrationPriority());
+    }
+
+    @Test
+    @DisplayName("BUG 1 FIX: Maven-enriched AST findings (JAVA_AST_MAVEN) must be classified as DIRECT_USAGE")
+    void testClassifyJavaAstMavenDirectUsage() {
+        CryptoFinding finding = new CryptoFinding();
+        finding.setAlgorithm("AES");
+        finding.setVariant("GCM/NoPadding");
+        finding.setPurpose(CryptoFinding.Purpose.ENCRYPTION);
+        finding.setFile("OrderService.java");
+        finding.setLine(42);
+        finding.setEvidence("Cipher.getInstance(\"AES/GCM/NoPadding\")");
+        finding.setConfidence(CryptoFinding.Confidence.HIGH);
+        finding.setSourceType("JAVA_AST_MAVEN");
+        finding.setLibrary("BouncyCastle");
+
+        CryptoAsset asset = classifier.classify(finding);
+
+        assertNotNull(asset);
+        assertEquals(CryptoUsageCategory.DIRECT_USAGE, asset.getUsageCategory(),
+                "JAVA_AST_MAVEN finding must be classified as DIRECT_USAGE");
+        assertEquals(CryptoUsageCategory.DIRECT_USAGE, finding.getUsageCategory());
     }
 }

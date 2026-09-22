@@ -170,11 +170,89 @@ class AnalysisControllerTest {
                 .andExpect(jsonPath("$.message").exists());
     }
 
+    @Test
+    void testUploadEndpointZipSlipRejected() throws Exception {
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        try (ZipOutputStream zos = new ZipOutputStream(baos)) {
+            ZipEntry maliciousEntry = new ZipEntry("../../evil.java");
+            zos.putNextEntry(maliciousEntry);
+            zos.write("public class Evil {}".getBytes());
+            zos.closeEntry();
+        }
+
+        MockMultipartFile zipFile = new MockMultipartFile(
+                "file", "malicious.zip", "application/zip", baos.toByteArray());
+
+        mockMvc.perform(multipart("/api/analyze/upload").file(zipFile))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.error").value("Security Violation"));
+    }
+
     // 7. Health endpoint is preserved
     @Test
     void testHealthEndpointPreserved() throws Exception {
         mockMvc.perform(get("/health"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("UP"));
+    }
+
+    // 8. Capabilities endpoint returns all 7 input types with correct support status
+    @Test
+    void testCapabilitiesEndpoint() throws Exception {
+        mockMvc.perform(get("/api/analyze/capabilities"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.inputs").isArray())
+                .andExpect(jsonPath("$.inputs[?(@.type == 'ZIP_ARCHIVE')].supported").value(true))
+                .andExpect(jsonPath("$.inputs[?(@.type == 'SOURCE_FILE')].supported").value(true))
+                .andExpect(jsonPath("$.inputs[?(@.type == 'DIRECTORY')].supported").value(true))
+                .andExpect(jsonPath("$.inputs[?(@.type == 'REPOSITORY_URL')].supported").value(true))
+                .andExpect(jsonPath("$.inputs[?(@.type == 'REPOSITORY_URL')].plannedPhase").value("PHASE_5"))
+                .andExpect(jsonPath("$.inputs[?(@.type == 'CONFIGURATION_FILE')].supported").value(true))
+                .andExpect(jsonPath("$.inputs[?(@.type == 'CONFIGURATION_FILE')].plannedPhase").value("PHASE_6"))
+                .andExpect(jsonPath("$.inputs[?(@.type == 'BINARY_FILE')].supported").value(true))
+                .andExpect(jsonPath("$.inputs[?(@.type == 'BINARY_FILE')].plannedPhase").value("PHASE_7"))
+                .andExpect(jsonPath("$.inputs[?(@.type == 'CONTAINER_IMAGE')].supported").value(true))
+                .andExpect(jsonPath("$.inputs[?(@.type == 'CONTAINER_IMAGE')].plannedPhase").value("PHASE_8"));
+    }
+
+    // 9. Source file analysis via /api/analyze/source
+    @Test
+    void testSourceFileAnalysisEndpoint() throws Exception {
+        String javaContent = "import javax.crypto.Cipher;\npublic class CryptoTest {\n" +
+                "  public void test() throws Exception {\n" +
+                "    Cipher c = Cipher.getInstance(\"AES/GCM/NoPadding\");\n" +
+                "  }\n}\n";
+        MockMultipartFile javaFile = new MockMultipartFile(
+                "file", "CryptoTest.java", "text/x-java-source", javaContent.getBytes()
+        );
+
+        mockMvc.perform(multipart("/api/analyze/source").file(javaFile))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("SUCCESS"))
+                .andExpect(jsonPath("$.inputType").value("SOURCE_FILE"))
+                .andExpect(jsonPath("$.findings").isArray())
+                .andExpect(jsonPath("$.findings[0].algorithm").value("AES"))
+                .andExpect(jsonPath("$.summary.totalFindings").value(1));
+    }
+
+    // 10. Direct Java source file uploaded to /api/analyze/upload is automatically routed to source analyzer
+    @Test
+    void testUploadEndpointWithJavaSourceFile() throws Exception {
+        String javaContent = "import java.security.MessageDigest;\npublic class HashTest {\n" +
+                "  public void test() throws Exception {\n" +
+                "    MessageDigest md = MessageDigest.getInstance(\"SHA-256\");\n" +
+                "  }\n}\n";
+        MockMultipartFile javaFile = new MockMultipartFile(
+                "file", "HashTest.java", "text/x-java-source", javaContent.getBytes()
+        );
+
+        mockMvc.perform(multipart("/api/analyze/upload").file(javaFile))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("SUCCESS"))
+                .andExpect(jsonPath("$.inputType").value("SOURCE_FILE"))
+                .andExpect(jsonPath("$.findings").isArray())
+                .andExpect(jsonPath("$.findings[0].algorithm").value("SHA-256"))
+                .andExpect(jsonPath("$.summary.totalFindings").value(1));
     }
 }

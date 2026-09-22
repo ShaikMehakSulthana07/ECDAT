@@ -57,6 +57,10 @@ class ScanWorkspaceTest {
             assertEquals(root.resolve("config"), workspace.getConfigPath());
             assertEquals(root.resolve("certificates"), workspace.getCertificatesPath());
             assertEquals(root.resolve("metadata"), workspace.getMetadataPath());
+            assertFalse(Files.exists(workspace.getBinariesPath()), "Phase 4 must not create unused binaries/");
+            assertFalse(Files.exists(workspace.getConfigPath()), "Phase 4 must not create unused config/");
+            assertFalse(Files.exists(workspace.getCertificatesPath()), "Phase 4 must not create unused certificates/");
+            assertFalse(Files.exists(workspace.getMetadataPath()), "Phase 4 must not create unused metadata/");
         }
     }
 }

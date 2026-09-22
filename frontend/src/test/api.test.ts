@@ -103,21 +103,72 @@ describe('ECDAT API Service Tests', () => {
     );
   });
 
-  it('analyzeRepository throws explicit unsupported ApiError', async () => {
-    await expect(apiService.analyzeRepository('https://github.com/org/repo.git')).rejects.toThrow(
-      'Git repository analysis requires backend service integration'
+  it('analyzeRepository sends POST request to /api/analyze/repository', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ status: 'SUCCESS', findings: [] }),
+    }) as any;
+
+    await apiService.analyzeRepository('https://github.com/org/repo.git');
+
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      expect.stringContaining('/api/analyze/repository'),
+      expect.objectContaining({
+        method: 'POST',
+        headers: expect.objectContaining({
+          'Content-Type': 'application/json',
+        }),
+      })
     );
   });
 
   it('analyzeFiles throws explicit unsupported ApiError', async () => {
     await expect(apiService.analyzeFiles([])).rejects.toThrow(
-      'Loose file/binary scanning is currently in active development'
+      'File and binary scanning is not yet available.'
     );
   });
 
   it('analyzeContainer throws explicit unsupported ApiError', async () => {
     await expect(apiService.analyzeContainer('docker.io/app:latest')).rejects.toThrow(
-      'Container image inspection requires container daemon integration'
+      'Container image scanning is not yet available.'
+    );
+  });
+
+  it('getCapabilities fetches capabilities from backend', async () => {
+    const mockCapabilities = {
+      inputs: [
+        { type: 'ZIP_ARCHIVE', supported: true, displayName: 'ZIP / TAR Archive', description: 'Uploaded archive' },
+        { type: 'SOURCE_FILE', supported: true, displayName: 'Source File', description: 'Java source file' },
+        { type: 'REPOSITORY_URL', supported: false, plannedPhase: 'PHASE_5', displayName: 'Repository URL', description: 'Git repo' },
+      ],
+    };
+
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => mockCapabilities,
+    });
+
+    const result = await apiService.getCapabilities();
+    expect(result.length).toBe(3);
+    expect(result[0].type).toBe('ZIP_ARCHIVE');
+    expect(result[0].supported).toBe(true);
+    expect(globalThis.fetch).toHaveBeenCalledWith('http://localhost:8080/api/analyze/capabilities', expect.any(Object));
+  });
+
+  it('analyzeSourceFile sends multipart form data to /api/analyze/source', async () => {
+    const mockFile = new File(['public class Demo {}'], 'Demo.java', { type: 'text/x-java-source' });
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ status: 'SUCCESS', sourcePath: 'temp/Demo.java', inputType: 'SOURCE_FILE' }),
+    });
+
+    const result = await apiService.analyzeSourceFile(mockFile);
+    expect(result.status).toBe('SUCCESS');
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      'http://localhost:8080/api/analyze/source',
+      expect.objectContaining({
+        method: 'POST',
+      })
     );
   });
 });

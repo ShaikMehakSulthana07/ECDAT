@@ -139,6 +139,40 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     return Object.entries(map).sort((a, b) => b[1].count - a[1].count);
   }, [findings, riskAssessments]);
 
+  // Classify algorithms for Shor's vs Grover's impact
+  const shorAlgorithms = useMemo(() => {
+    const asymmetricAlgos = ['RSA', 'ECDSA', 'ECDH', 'DSA', 'Diffie-Hellman', 'DH', 'Elliptic Curve'];
+    return findings.filter((f, idx) => {
+      const risk = riskAssessments[idx];
+      const isVuln = risk?.quantumRisk === 'HIGH' || risk?.quantumRiskResult?.quantumVulnerable;
+      const isAsymmetric = asymmetricAlgos.some(algo => 
+        f.algorithm.toUpperCase().includes(algo.toUpperCase())
+      );
+      return isAsymmetric && isVuln;
+    });
+  }, [findings, riskAssessments]);
+
+  const groverAlgorithms = useMemo(() => {
+    const symmetricHashAlgos = ['AES', 'SHA', 'MD5', 'HMAC', 'HASH'];
+    return findings.filter((f) => {
+      const isSymmetric = symmetricHashAlgos.some(algo => 
+        f.algorithm.toUpperCase().includes(algo.toUpperCase())
+      );
+      return isSymmetric;
+    });
+  }, [findings]);
+
+  // PQC recommendations summary
+  const pqcTargets = useMemo(() => {
+    const targets: Record<string, number> = {};
+    pqcRecommendations.forEach((pqc) => {
+      if (pqc.recommendedAlgorithm) {
+        targets[pqc.recommendedAlgorithm] = (targets[pqc.recommendedAlgorithm] || 0) + 1;
+      }
+    });
+    return Object.entries(targets).sort((a, b) => b[1] - a[1]);
+  }, [pqcRecommendations]);
+
   // Prioritize findings for Recent Findings table (Critical/High and Quantum Vulnerable first)
   const prioritizedFindings = findings
     .map((finding, idx) => ({
@@ -167,6 +201,31 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           <p className="view-subtitle">
             Visibility into cryptographic assets, quantum exposure, and migration readiness.
           </p>
+          {/* Contextual Metadata Row - Only show fields that exist */}
+          {(analysisData.inputName || analysisData.inputType || analysisData.context?.applicationName) && (
+            <div className="view-metadata-row">
+              {analysisData.inputName && (
+                <div className="metadata-item">
+                  <span className="metadata-label">Target:</span>
+                  <span className="metadata-value font-mono" title={analysisData.inputName}>
+                    {analysisData.inputName.length > 40 ? analysisData.inputName.substring(0, 40) + '...' : analysisData.inputName}
+                  </span>
+                </div>
+              )}
+              {analysisData.inputType && (
+                <div className="metadata-item">
+                  <span className="metadata-label">Source:</span>
+                  <span className="metadata-value">{analysisData.inputType}</span>
+                </div>
+              )}
+              {analysisData.context?.applicationName && (
+                <div className="metadata-item">
+                  <span className="metadata-label">Application:</span>
+                  <span className="metadata-value">{analysisData.context.applicationName}</span>
+                </div>
+              )}
+            </div>
+          )}
         </div>
         <div className="view-actions">
           <button className="btn-secondary" onClick={() => onNavigate('scan')} title="Run a new project scan">
@@ -488,12 +547,12 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           )}
         </div>
 
-        {/* Right: Quantum Exposure */}
+        {/* Right: Quantum Exposure & Threat Spectrum */}
         <div className="chart-card">
           <div className="chart-card-header">
             <div>
-              <h3 className="chart-card-title">Quantum Exposure</h3>
-              <span className="chart-card-sub">Post-quantum readiness &amp; Shor&apos;s algorithm vulnerability</span>
+              <h3 className="chart-card-title">Quantum Exposure & Threat Spectrum</h3>
+              <span className="chart-card-sub">Post-quantum readiness assessment by algorithm category</span>
             </div>
             <button className="card-link-btn" onClick={() => onNavigate('quantum')}>
               Assessment →
@@ -525,32 +584,84 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               </div>
             </div>
 
-            {/* Exposure Status Tiles */}
-            <div className="exposure-tiles-grid">
-              <div className="exposure-tile vuln" onClick={() => onNavigate('quantum')}>
-                <div className="exposure-tile-top">
-                  <span className="tile-badge-dot vuln"></span>
-                  <span className="tile-title">Quantum Vulnerable</span>
-                </div>
-                <div className="tile-val-row">
-                  <span className="tile-val text-critical">{quantumVulnCount}</span>
-                  <span className="tile-sub">Public-key / Discrete Log</span>
-                </div>
-                <p className="tile-desc">RSA, ECC, DSA, Diffie-Hellman subject to Shor&apos;s factoring attack</p>
+            {/* Shor's Algorithm Impact */}
+            <div className="quantum-section">
+              <div className="quantum-section-header">
+                <span className="quantum-section-title">Shor&apos;s Algorithm Impact</span>
+                <span className="quantum-section-badge critical">Asymmetric Vulnerable</span>
               </div>
-
-              <div className="exposure-tile safe" onClick={() => onNavigate('quantum')}>
-                <div className="exposure-tile-top">
-                  <span className="tile-badge-dot safe"></span>
-                  <span className="tile-title">Quantum Safe</span>
-                </div>
-                <div className="tile-val-row">
-                  <span className="tile-val text-low">{quantumSafeCount}</span>
-                  <span className="tile-sub">Symmetric &amp; Hashing</span>
-                </div>
-                <p className="tile-desc">AES-256, SHA-256/384 resistant under Grover&apos;s quadratic speedup</p>
+              <div className="quantum-section-desc">
+                Public-key cryptography vulnerable to quantum factoring (RSA, ECC, DSA, Diffie-Hellman)
               </div>
+              {shorAlgorithms.length > 0 ? (
+                <div className="quantum-algo-list">
+                  {shorAlgorithms.slice(0, 5).map((f, idx) => (
+                    <div key={idx} className="quantum-algo-item vuln">
+                      <span className="quantum-algo-name font-mono">{f.algorithm}</span>
+                      <span className="quantum-algo-count">1</span>
+                    </div>
+                  ))}
+                  {shorAlgorithms.length > 5 && (
+                    <div className="quantum-algo-more">
+                      +{shorAlgorithms.length - 5} more
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="quantum-empty-state">No asymmetric quantum-vulnerable algorithms detected</div>
+              )}
             </div>
+
+            {/* Grover's Algorithm Impact */}
+            <div className="quantum-section">
+              <div className="quantum-section-header">
+                <span className="quantum-section-title">Grover&apos;s Algorithm Impact</span>
+                <span className="quantum-section-badge warning">Degraded Security</span>
+              </div>
+              <div className="quantum-section-desc">
+                Symmetric cryptography and hash functions with quadratic speedup (AES, SHA, HMAC)
+              </div>
+              {groverAlgorithms.length > 0 ? (
+                <div className="quantum-algo-list">
+                  {groverAlgorithms.slice(0, 5).map((f, idx) => (
+                    <div key={idx} className="quantum-algo-item warning">
+                      <span className="quantum-algo-name font-mono">{f.algorithm}</span>
+                      <span className="quantum-algo-count">1</span>
+                    </div>
+                  ))}
+                  {groverAlgorithms.length > 5 && (
+                    <div className="quantum-algo-more">
+                      +{groverAlgorithms.length - 5} more
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="quantum-empty-state">No symmetric/hash algorithms detected</div>
+              )}
+            </div>
+
+            {/* Recommended PQC Targets */}
+            {pqcTargets.length > 0 && (
+              <div className="quantum-section">
+                <div className="quantum-section-header">
+                  <span className="quantum-section-title">Recommended PQC Targets</span>
+                  <span className="quantum-section-badge indigo">NIST Standards</span>
+                </div>
+                <div className="quantum-pqc-list">
+                  {pqcTargets.slice(0, 4).map(([algo, count], idx) => (
+                    <div key={idx} className="quantum-pqc-item">
+                      <span className="quantum-pqc-name font-mono">{algo}</span>
+                      <span className="quantum-pqc-count">{count} recommendations</span>
+                    </div>
+                  ))}
+                  {pqcTargets.length > 4 && (
+                    <div className="quantum-pqc-more">
+                      +{pqcTargets.length - 4} more algorithms
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -692,7 +803,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                       >
                         <td>
                           <div className="algo-cell-block">
-                            <span className="algo-primary-title">{finding.algorithm}</span>
+                            <span className="algo-primary-title" title={finding.algorithm}>{finding.algorithm}</span>
                             {(finding.keySize || (finding.variant && finding.variant !== finding.algorithm)) && (
                               <span className="algo-secondary-sub font-mono">
                                 {finding.keySize ? `${finding.keySize} bits` : ''}
@@ -703,7 +814,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                           </div>
                         </td>
                         <td>
-                          <span className="table-purpose-text">{purposeDisplay}</span>
+                          <span className="table-purpose-text" title={purposeDisplay}>{purposeDisplay}</span>
                         </td>
                         <td>
                           <span className={`risk-badge ${riskLevel.toLowerCase()}`}>

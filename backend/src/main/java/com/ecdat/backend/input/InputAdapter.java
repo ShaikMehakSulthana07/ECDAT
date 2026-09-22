@@ -4,6 +4,7 @@ import java.io.IOException;
 
 /**
  * Strategy interface for converting a specific input source into a normalized ScanWorkspace.
+ * Preserved for backward compatibility while delegating/bridging to AnalysisInputProcessor.
  */
 public interface InputAdapter {
 

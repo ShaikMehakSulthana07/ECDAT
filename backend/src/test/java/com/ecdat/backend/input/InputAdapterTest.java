@@ -105,24 +105,32 @@ class InputAdapterTest {
     void testUnsupportedAdaptersThrowExplicitExceptions() {
         InputAdapter gitAdapter = registry.getAdapter(ScanInputType.GIT_REPOSITORY);
         ScanRequest gitRequest = ScanRequest.forGitRepository("https://github.com/org/repo.git", null);
-        UnsupportedOperationException gitEx = assertThrows(
-                UnsupportedOperationException.class, () -> gitAdapter.prepareWorkspace(gitRequest)
+        UnsupportedInputException gitEx = assertThrows(
+                UnsupportedInputException.class, () -> gitAdapter.prepareWorkspace(gitRequest)
         );
-        assertTrue(gitEx.getMessage().contains("Phase 5"));
+        assertTrue(gitEx.getMessage().contains("not yet available"));
+        assertEquals(ScanInputType.GIT_REPOSITORY, gitEx.getInputType());
 
         InputAdapter containerAdapter = registry.getAdapter(ScanInputType.CONTAINER_IMAGE);
         ScanRequest containerRequest = ScanRequest.forContainer("app:latest", null);
-        UnsupportedOperationException contEx = assertThrows(
-                UnsupportedOperationException.class, () -> containerAdapter.prepareWorkspace(containerRequest)
+        UnsupportedInputException contEx = assertThrows(
+                UnsupportedInputException.class, () -> containerAdapter.prepareWorkspace(containerRequest)
         );
-        assertTrue(contEx.getMessage().contains("Phase 8"));
+        assertTrue(contEx.getMessage().contains("not yet available"));
 
         InputAdapter filesAdapter = registry.getAdapter(ScanInputType.FILES);
         ScanRequest filesRequest = ScanRequest.forFiles("config.yml", null);
-        UnsupportedOperationException filesEx = assertThrows(
-                UnsupportedOperationException.class, () -> filesAdapter.prepareWorkspace(filesRequest)
+        UnsupportedInputException filesEx = assertThrows(
+                UnsupportedInputException.class, () -> filesAdapter.prepareWorkspace(filesRequest)
         );
-        assertTrue(filesEx.getMessage().contains("Phase 6"));
+        assertTrue(filesEx.getMessage().contains("not yet available"));
+
+        assertThrows(UnsupportedInputException.class,
+                () -> registry.getAdapter(ScanInputType.JAR).prepareWorkspace(new ScanRequest(ScanInputType.JAR, "lib.jar")));
+        assertThrows(UnsupportedInputException.class,
+                () -> registry.getAdapter(ScanInputType.CLASS).prepareWorkspace(new ScanRequest(ScanInputType.CLASS, "App.class")));
+        assertThrows(UnsupportedInputException.class,
+                () -> registry.getAdapter(ScanInputType.CONFIGURATION).prepareWorkspace(new ScanRequest(ScanInputType.CONFIGURATION, "application.yml")));
     }
 
     @Test

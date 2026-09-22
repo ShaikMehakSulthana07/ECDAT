@@ -186,10 +186,10 @@ describe('ECDAT Enterprise Frontend Redesign Tests', () => {
   it('1. Phase 1: Renders LoginScreen with split screen layout matching reference', () => {
     const handleLogin = vi.fn();
     render(<LoginScreen onLogin={handleLogin} />);
-    expect(screen.getAllByText('ECDAT').length).toBeGreaterThanOrEqual(1);
-    expect(screen.getByText(/Enterprise Cryptographic Discovery & Analysis/i)).toBeInTheDocument();
+    expect(screen.getAllByText('CRYPTAGUARD').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText(/Enterprise Cryptographic Discovery & Quantum Risk Intelligence/i)).toBeInTheDocument();
     expect(screen.getByText(/Discover, Analyze, Secure, Quantum Ready/i)).toBeInTheDocument();
-    expect(screen.getByText(/Welcome to ECDAT/i)).toBeInTheDocument();
+    expect(screen.getByText(/Welcome to CRYPTAGUARD/i)).toBeInTheDocument();
     expect(screen.getByText(/Sign in to access your security analysis workspace/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/^Email Address$/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/^Password$/i)).toBeInTheDocument();
@@ -251,7 +251,7 @@ describe('ECDAT Enterprise Frontend Redesign Tests', () => {
     expect(screen.getByText('Migration Required')).toBeInTheDocument();
     expect(screen.getByText('PQC Recommendations')).toBeInTheDocument();
     expect(screen.getByText('Risk Distribution')).toBeInTheDocument();
-    expect(screen.getByText('Quantum Exposure')).toBeInTheDocument();
+    expect(screen.getByText('Quantum Exposure & Threat Spectrum')).toBeInTheDocument();
     expect(screen.getByText('Quantum Exposure Assessment')).toBeInTheDocument();
     expect(screen.getByText('Recent Cryptographic Findings')).toBeInTheDocument();
 
@@ -459,7 +459,7 @@ describe('ECDAT Enterprise Frontend Redesign Tests', () => {
       render(<App />);
     });
 
-    expect(screen.getAllByText('ECDAT').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText('CRYPTAGUARD').length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText(/Analysis Engine:/i)).toBeInTheDocument();
     expect(screen.getAllByText('Dashboard').length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText('Scan Project').length).toBeGreaterThanOrEqual(1);
@@ -499,17 +499,23 @@ describe('ECDAT Enterprise Frontend Redesign Tests', () => {
     // 2. Analysis Source Section & 4 Cards
     expect(screen.getByRole('heading', { name: 'Analysis Source' })).toBeInTheDocument();
     expect(screen.getByText('Upload Project')).toBeInTheDocument();
-    expect(screen.getByText('ZIP or TAR project archive')).toBeInTheDocument();
+    expect(screen.getByText('ZIP / TAR archive')).toBeInTheDocument();
+    expect(screen.getAllByText('Available').length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText('Repository URL')).toBeInTheDocument();
-    expect(screen.getByText('Analyze a Git repository')).toBeInTheDocument();
-    expect(screen.getByText('Files & Binaries')).toBeInTheDocument();
-    expect(screen.getByText('JAR, CLASS, configuration and certificate files')).toBeInTheDocument();
+    expect(screen.getByText('Git repository')).toBeInTheDocument();
+    expect(screen.getByText('Configuration File')).toBeInTheDocument();
+    expect(screen.getByText('Properties / YAML / XML')).toBeInTheDocument();
     expect(screen.getByText('Container Image')).toBeInTheDocument();
-    expect(screen.getByText('Analyze a container image or image archive')).toBeInTheDocument();
+    expect(screen.getByText('Container image or archive (.tar, .tar.gz)')).toBeInTheDocument();
 
-    // Badges for roadmap features
-    expect(screen.getByText('Backend integration required')).toBeInTheDocument();
-    expect(screen.getAllByText('Coming soon').length).toBe(2);
+    // Badges for roadmap features - All input types are now available (Phase 5, 6, 7, 8)
+    // So we don't expect any "Coming soon" badges for input types
+    expect(screen.queryAllByText('Coming soon').length).toBe(0);
+
+    fireEvent.click(screen.getByText('Repository URL'));
+    // Repository URL is now available, so it should show the input field
+    expect(screen.getByPlaceholderText('https://github.com/username/repository')).toBeInTheDocument();
+    expect(screen.getByText(/Public Git repositories are currently supported/i)).toBeInTheDocument();
 
     // 3. Analysis Scope Section & 6 Custom Cards
     expect(screen.getByRole('heading', { name: 'Analysis Scope' })).toBeInTheDocument();

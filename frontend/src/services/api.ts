@@ -1,4 +1,4 @@
-import type { AnalysisResponse, ErrorResponse, ProjectAnalysisContext } from '../types/analysis';
+import type { AnalysisResponse, ErrorResponse, ProjectAnalysisContext, InputCapability } from '../types/analysis';
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
 
@@ -117,6 +117,69 @@ export const apiService = {
   },
 
   /**
+   * Fetches backend ingestion capabilities and roadmap status.
+   */
+  async getCapabilities(): Promise<InputCapability[]> {
+    try {
+      const response = await fetch(`${BASE_URL}/api/analyze/capabilities`, {
+        method: 'GET',
+        headers: {
+          Accept: 'application/json',
+        },
+      });
+      const data = await handleResponse<{ inputs: InputCapability[] }>(response);
+      return data.inputs || [];
+    } catch (err: unknown) {
+      if (err instanceof ApiError) {
+        throw err;
+      }
+      return [
+        { type: 'ZIP_ARCHIVE', supported: true, displayName: 'ZIP / TAR Archive', description: 'Uploaded compressed project archive (.zip)' },
+        { type: 'SOURCE_FILE', supported: true, displayName: 'Source File', description: 'Direct Java source file (.java)' },
+        { type: 'DIRECTORY', supported: true, displayName: 'Local Directory', description: 'Local filesystem project directory' },
+        { type: 'REPOSITORY_URL', supported: true, plannedPhase: 'PHASE_5', displayName: 'Repository URL', description: 'Remote Git repository URL (e.g., GitHub, GitLab)' },
+        { type: 'CONFIGURATION_FILE', supported: true, plannedPhase: 'PHASE_6', displayName: 'Configuration File', description: 'Application configuration file (e.g. application.yml)' },
+        { type: 'BINARY_FILE', supported: true, plannedPhase: 'PHASE_7', displayName: 'Binary File', description: 'Compiled Java Archive or bytecode (.jar, .class)' },
+        { type: 'CONTAINER_IMAGE', supported: true, plannedPhase: 'PHASE_8', displayName: 'Container Image', description: 'Container image or image archive (.tar, .tar.gz)' },
+      ];
+    }
+  },
+
+  /**
+   * Direct individual source file analysis (Java source .java).
+   */
+  async analyzeSourceFile(file: File, context?: ProjectAnalysisContext): Promise<AnalysisResponse> {
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      if (context) {
+        if (context.applicationName) formData.append('applicationName', context.applicationName);
+        if (context.businessCriticality) formData.append('businessCriticality', context.businessCriticality);
+        if (context.dataSensitivity) formData.append('dataSensitivity', context.dataSensitivity);
+        if (context.dataLifetimeYears) formData.append('dataLifetimeYears', context.dataLifetimeYears.toString());
+        if (context.migrationTimeYears) formData.append('migrationTimeYears', context.migrationTimeYears.toString());
+        if (context.threatHorizonYears) formData.append('threatHorizonYears', context.threatHorizonYears.toString());
+      }
+
+      const response = await fetch(`${BASE_URL}/api/analyze/source`, {
+        method: 'POST',
+        body: formData,
+      });
+      return await handleResponse<AnalysisResponse>(response);
+    } catch (err: unknown) {
+      if (err instanceof ApiError) {
+        throw err;
+      }
+      throw new ApiError(
+        'Network error while uploading source file for analysis.',
+        0,
+        'NETWORK_ERROR'
+      );
+    }
+  },
+
+  /**
    * Primary method for ZIP archive analysis in Phase 4.
    */
   async analyzeZip(file: File, context?: ProjectAnalysisContext): Promise<AnalysisResponse> {
@@ -124,14 +187,98 @@ export const apiService = {
   },
 
   /**
-   * Roadmap stub for Git Repository scanning (Phase 5).
+   * Analyzes a public Git repository URL.
    */
-  async analyzeRepository(_url: string, _context?: ProjectAnalysisContext): Promise<AnalysisResponse> {
-    throw new ApiError(
-      'Git repository analysis requires backend service integration (Roadmap feature - Phase 5).',
-      400,
-      'UNSUPPORTED_INPUT_TYPE'
-    );
+  async analyzeRepository(url: string, context?: ProjectAnalysisContext): Promise<AnalysisResponse> {
+    try {
+      const requestBody = context ? { repositoryUrl: url, context } : { repositoryUrl: url };
+      const response = await fetch(`${BASE_URL}/api/analyze/repository`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+        body: JSON.stringify(requestBody),
+      });
+      return await handleResponse<AnalysisResponse>(response);
+    } catch (err: unknown) {
+      if (err instanceof ApiError) {
+        throw err;
+      }
+      throw new ApiError(
+        'Network error while connecting to repository analysis API.',
+        0,
+        'NETWORK_ERROR'
+      );
+    }
+  },
+
+  /**
+   * Analyzes an uploaded configuration file (.properties, .yml, .yaml, .xml, .conf, .cfg, .ini).
+   */
+  async analyzeConfigurationFile(file: File, context?: ProjectAnalysisContext): Promise<AnalysisResponse> {
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      if (context) {
+        if (context.applicationName) formData.append('applicationName', context.applicationName);
+        if (context.businessCriticality) formData.append('businessCriticality', context.businessCriticality);
+        if (context.dataSensitivity) formData.append('dataSensitivity', context.dataSensitivity);
+        if (context.dataLifetimeYears) formData.append('dataLifetimeYears', context.dataLifetimeYears.toString());
+        if (context.migrationTimeYears) formData.append('migrationTimeYears', context.migrationTimeYears.toString());
+        if (context.threatHorizonYears) formData.append('threatHorizonYears', context.threatHorizonYears.toString());
+      }
+
+      const response = await fetch(`${BASE_URL}/api/analyze/configuration`, {
+        method: 'POST',
+        body: formData,
+      });
+      return await handleResponse<AnalysisResponse>(response);
+    } catch (err: unknown) {
+      if (err instanceof ApiError) {
+        throw err;
+      }
+      throw new ApiError(
+        'Network error while uploading configuration file for analysis.',
+        0,
+        'NETWORK_ERROR'
+      );
+    }
+  },
+
+  /**
+   * Analyzes an uploaded binary file (.jar, .class).
+   */
+  async analyzeBinaryFile(file: File, context?: ProjectAnalysisContext): Promise<AnalysisResponse> {
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      if (context) {
+        if (context.applicationName) formData.append('applicationName', context.applicationName);
+        if (context.businessCriticality) formData.append('businessCriticality', context.businessCriticality);
+        if (context.dataSensitivity) formData.append('dataSensitivity', context.dataSensitivity);
+        if (context.dataLifetimeYears) formData.append('dataLifetimeYears', context.dataLifetimeYears.toString());
+        if (context.migrationTimeYears) formData.append('migrationTimeYears', context.migrationTimeYears.toString());
+        if (context.threatHorizonYears) formData.append('threatHorizonYears', context.threatHorizonYears.toString());
+      }
+
+      const response = await fetch(`${BASE_URL}/api/analyze/binary`, {
+        method: 'POST',
+        body: formData,
+      });
+      return await handleResponse<AnalysisResponse>(response);
+    } catch (err: unknown) {
+      if (err instanceof ApiError) {
+        throw err;
+      }
+      throw new ApiError(
+        'Network error while uploading binary file for analysis.',
+        0,
+        'NETWORK_ERROR'
+      );
+    }
   },
 
   /**
@@ -139,10 +286,44 @@ export const apiService = {
    */
   async analyzeFiles(_files: File[], _context?: ProjectAnalysisContext): Promise<AnalysisResponse> {
     throw new ApiError(
-      'Loose file/binary scanning is currently in active development (Roadmap feature - Phase 6/7).',
+      'File and binary scanning is not yet available.',
       400,
       'UNSUPPORTED_INPUT_TYPE'
     );
+  },
+
+  /**
+   * Analyzes an uploaded container image archive (.tar, .tar.gz, .tgz).
+   */
+  async analyzeContainerImage(file: File, context?: ProjectAnalysisContext): Promise<AnalysisResponse> {
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      if (context) {
+        if (context.applicationName) formData.append('applicationName', context.applicationName);
+        if (context.businessCriticality) formData.append('businessCriticality', context.businessCriticality);
+        if (context.dataSensitivity) formData.append('dataSensitivity', context.dataSensitivity);
+        if (context.dataLifetimeYears) formData.append('dataLifetimeYears', context.dataLifetimeYears.toString());
+        if (context.migrationTimeYears) formData.append('migrationTimeYears', context.migrationTimeYears.toString());
+        if (context.threatHorizonYears) formData.append('threatHorizonYears', context.threatHorizonYears.toString());
+      }
+
+      const response = await fetch(`${BASE_URL}/api/analyze/container`, {
+        method: 'POST',
+        body: formData,
+      });
+      return await handleResponse<AnalysisResponse>(response);
+    } catch (err: unknown) {
+      if (err instanceof ApiError) {
+        throw err;
+      }
+      throw new ApiError(
+        'Network error while uploading container image for analysis.',
+        0,
+        'NETWORK_ERROR'
+      );
+    }
   },
 
   /**
@@ -150,7 +331,7 @@ export const apiService = {
    */
   async analyzeContainer(_image: string, _context?: ProjectAnalysisContext): Promise<AnalysisResponse> {
     throw new ApiError(
-      'Container image inspection requires container daemon integration (Roadmap feature - Phase 8).',
+      'Container image scanning is not yet available.',
       400,
       'UNSUPPORTED_INPUT_TYPE'
     );

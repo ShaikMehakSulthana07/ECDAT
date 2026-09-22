@@ -6,6 +6,7 @@ import com.ecdat.backend.inventory.CryptoInventory;
 import com.ecdat.backend.pqc.PQCRecommendation;
 import com.ecdat.backend.risk.RiskAssessment;
 import com.ecdat.backend.scanner.CryptoFinding;
+import com.ecdat.backend.scanner.configuration.ConfigurationFinding;
 import com.ecdat.backend.scanner.certificate.CertificateArtifactFinding;
 import com.fasterxml.jackson.annotation.JsonInclude;
 
@@ -16,6 +17,9 @@ import java.util.List;
 public class AnalysisResponse {
     private String status;
     private String sourcePath;
+    private String inputType;
+    private String inputName;
+    private String inputSource;
     private List<CryptoFinding> findings;
     private List<RiskAssessment> riskAssessments;
     private List<PQCRecommendation> pqcRecommendations;
@@ -25,6 +29,7 @@ public class AnalysisResponse {
     private AnalysisSummary summary;
     private ProjectAnalysisContext context;
     private List<CertificateArtifactFinding> certificateFindings;
+    private List<ConfigurationFinding> configurationFindings;
 
     public AnalysisResponse() {
         this.findings = new ArrayList<>();
@@ -67,6 +72,15 @@ public class AnalysisResponse {
     public String getSourcePath() { return sourcePath; }
     public void setSourcePath(String sourcePath) { this.sourcePath = sourcePath; }
 
+    public String getInputType() { return inputType; }
+    public void setInputType(String inputType) { this.inputType = inputType; }
+
+    public String getInputName() { return inputName; }
+    public void setInputName(String inputName) { this.inputName = inputName; }
+
+    public String getInputSource() { return inputSource; }
+    public void setInputSource(String inputSource) { this.inputSource = inputSource; }
+
     public List<CryptoFinding> getFindings() { return new ArrayList<>(findings); }
     public void setFindings(List<CryptoFinding> findings) {
         this.findings = findings != null ? new ArrayList<>(findings) : new ArrayList<>();
@@ -104,10 +118,17 @@ public class AnalysisResponse {
         return this;
     }
 
-    public List<CertificateArtifactFinding> getCertificateFindings() { 
-        return certificateFindings != null ? new ArrayList<>(certificateFindings) : new ArrayList<>(); 
+    public List<CertificateArtifactFinding> getCertificateFindings() {
+        return certificateFindings != null ? new ArrayList<>(certificateFindings) : new ArrayList<>();
     }
     public void setCertificateFindings(List<CertificateArtifactFinding> certificateFindings) {
         this.certificateFindings = certificateFindings != null ? new ArrayList<>(certificateFindings) : new ArrayList<>();
+    }
+
+    public List<ConfigurationFinding> getConfigurationFindings() {
+        return configurationFindings != null ? new ArrayList<>(configurationFindings) : new ArrayList<>();
+    }
+    public void setConfigurationFindings(List<ConfigurationFinding> configurationFindings) {
+        this.configurationFindings = configurationFindings != null ? new ArrayList<>(configurationFindings) : new ArrayList<>();
     }
 }
