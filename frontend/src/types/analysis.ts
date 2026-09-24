@@ -58,6 +58,8 @@ export type DataSensitivity = 'HIGHLY_SENSITIVE' | 'CONFIDENTIAL' | 'INTERNAL' |
 export interface CryptoFinding {
   algorithm: string;
   variant?: string | null;
+  mode?: string | null;
+  padding?: string | null;
   purpose: Purpose;
   keySize?: number | null;
   file: string;
@@ -79,6 +81,8 @@ export interface CryptoAsset {
   assetId: string;
   algorithm: string;
   variant?: string | null;
+  mode?: string | null;
+  padding?: string | null;
   purpose: Purpose;
   keySize?: number | null;
   protocol?: string | null;
@@ -173,6 +177,8 @@ export interface CBOMPQCInfo {
 export interface CBOMCryptoProperties {
   algorithm?: string;
   algorithmVariant?: string;
+  mode?: string | null;
+  padding?: string | null;
   purpose?: string;
   keySize?: number | null;
   protocol?: string;

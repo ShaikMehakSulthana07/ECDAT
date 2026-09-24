@@ -272,11 +272,13 @@ export const CryptoInventoryView: React.FC<CryptoInventoryViewProps> = ({
                       <td>
                         <div className="algo-cell-block">
                           <span className="algo-primary-title">{finding.algorithm}</span>
-                          {(finding.keySize || (finding.variant && finding.variant !== finding.algorithm)) && (
+                          {(finding.keySize || (finding.variant && finding.variant !== finding.algorithm) || finding.mode || finding.padding) && (
                             <span className="algo-secondary-sub font-mono">
                               {finding.keySize ? `${finding.keySize} bits` : ''}
-                              {finding.keySize && finding.variant && finding.variant !== finding.algorithm ? ' · ' : ''}
-                              {finding.variant && finding.variant !== finding.algorithm ? finding.variant : ''}
+                              {finding.keySize && (finding.mode || (finding.variant && finding.variant !== finding.algorithm)) ? ' · ' : ''}
+                              {finding.mode
+                                ? `${finding.mode}${finding.padding ? ` / ${finding.padding}` : ''}`
+                                : (finding.variant && finding.variant !== finding.algorithm ? finding.variant : '')}
                             </span>
                           )}
                         </div>

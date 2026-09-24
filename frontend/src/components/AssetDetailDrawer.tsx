@@ -191,6 +191,18 @@ export const AssetDetailDrawer: React.FC<AssetDetailDrawerProps> = ({
                     <span className="asset-prop-label">Variant</span>
                     <span className="asset-prop-value">{finding.variant || 'Not Specified'}</span>
                   </div>
+                  {finding.mode && (
+                    <div className="asset-prop-row">
+                      <span className="asset-prop-label">Cipher Mode</span>
+                      <span className="asset-prop-value font-mono">{finding.mode}</span>
+                    </div>
+                  )}
+                  {finding.padding && (
+                    <div className="asset-prop-row">
+                      <span className="asset-prop-label">Padding</span>
+                      <span className="asset-prop-value font-mono">{finding.padding}</span>
+                    </div>
+                  )}
                   <div className="asset-prop-row">
                     <span className="asset-prop-label">Purpose</span>
                     <span className="asset-prop-value"><span className="tag-subtle">{finding.purpose.replace(/_/g, ' ')}</span></span>

@@ -24,6 +24,7 @@ public class CryptoScanner extends VoidVisitorAdapter<List<CryptoFinding>> {
             String scope = n.getScope().get().toString();
             
             if (isCryptoAPI(scope) && n.getArguments().isNonEmpty()) {
+                String simpleScope = scope.contains(".") ? scope.substring(scope.lastIndexOf('.') + 1) : scope;
                 Expression arg = n.getArgument(0);
                 CryptoFinding finding = new CryptoFinding();
                 finding.setFile(filePath);
@@ -34,9 +35,9 @@ public class CryptoScanner extends VoidVisitorAdapter<List<CryptoFinding>> {
                 if (arg.isStringLiteralExpr()) {
                     String literalValue = arg.asStringLiteralExpr().getValue();
                     finding.setConfidence(CryptoFinding.Confidence.HIGH);
-                    parseAlgorithmDetails(scope, literalValue, finding);
+                    parseAlgorithmDetails(simpleScope, literalValue, finding);
                     
-                    if ("RSA".equals(finding.getAlgorithm()) && "KeyPairGenerator".equals(scope)) {
+                    if ("RSA".equals(finding.getAlgorithm()) && "KeyPairGenerator".equals(simpleScope)) {
                         extractKeySize(n, finding);
                     }
                 } else {
@@ -50,8 +51,9 @@ public class CryptoScanner extends VoidVisitorAdapter<List<CryptoFinding>> {
     }
 
     private boolean isCryptoAPI(String scope) {
+        String simpleScope = scope.contains(".") ? scope.substring(scope.lastIndexOf('.') + 1) : scope;
         return List.of("Cipher", "KeyPairGenerator", "Signature", "KeyAgreement", "MessageDigest", 
-                       "SSLContext", "KeyFactory", "SecretKeyFactory", "KeyGenerator", "Mac").contains(scope);
+                       "SSLContext", "KeyFactory", "SecretKeyFactory", "KeyGenerator", "Mac").contains(simpleScope);
     }
 
     private void parseAlgorithmDetails(String scope, String literalValue, CryptoFinding finding) {
@@ -60,23 +62,7 @@ public class CryptoScanner extends VoidVisitorAdapter<List<CryptoFinding>> {
         switch (scope) {
             case "Cipher":
                 finding.setPurpose(CryptoFinding.Purpose.ENCRYPTION);
-                if (upperVal.startsWith("AES")) {
-                    finding.setAlgorithm("AES");
-                    finding.setVariant(literalValue.contains("/") ? literalValue.split("/")[1] : "AES");
-                } else if (upperVal.startsWith("DES")) {
-                    finding.setAlgorithm("DES");
-                    finding.setVariant(literalValue);
-                } else if (upperVal.contains("3DES") || upperVal.contains("DESede")) {
-                    finding.setAlgorithm("3DES");
-                    finding.setVariant(literalValue);
-                } else if (upperVal.contains("ChaCha20") || upperVal.contains("CHACHA20")) {
-                    finding.setAlgorithm("ChaCha20");
-                    finding.setVariant(literalValue);
-                } else if (upperVal.contains("RSA")) {
-                    finding.setAlgorithm("RSA");
-                    finding.setVariant(literalValue);
-                    finding.setPurpose(CryptoFinding.Purpose.ENCRYPTION);
-                }
+                parseCipherTransformation(literalValue, finding);
                 break;
             case "KeyPairGenerator":
                 finding.setPurpose(CryptoFinding.Purpose.KEY_GENERATION);
@@ -152,6 +138,38 @@ public class CryptoScanner extends VoidVisitorAdapter<List<CryptoFinding>> {
                     finding.setVariant(literalValue);
                 }
                 break;
+        }
+    }
+
+    private void parseCipherTransformation(String transformation, CryptoFinding finding) {
+        String[] parts = transformation.split("/");
+        String rawAlgorithm = parts[0].trim();
+        String mode = parts.length > 1 && !parts[1].trim().isEmpty() ? parts[1].trim() : null;
+        String padding = parts.length > 2 && !parts[2].trim().isEmpty() ? parts[2].trim() : null;
+
+        finding.setMode(mode);
+        finding.setPadding(padding);
+
+        String upperAlgo = rawAlgorithm.toUpperCase();
+        if (upperAlgo.startsWith("AES")) {
+            finding.setAlgorithm("AES");
+            finding.setVariant(mode != null ? mode : "AES");
+        } else if (upperAlgo.startsWith("DES") && !upperAlgo.contains("3DES") && !upperAlgo.contains("DESEDE")) {
+            finding.setAlgorithm("DES");
+            finding.setVariant(transformation);
+        } else if (upperAlgo.contains("3DES") || upperAlgo.contains("DESEDE")) {
+            finding.setAlgorithm("3DES");
+            finding.setVariant(transformation);
+        } else if (upperAlgo.contains("CHACHA20")) {
+            finding.setAlgorithm("ChaCha20");
+            finding.setVariant(transformation);
+        } else if (upperAlgo.contains("RSA")) {
+            finding.setAlgorithm("RSA");
+            finding.setVariant(transformation);
+            finding.setPurpose(CryptoFinding.Purpose.ENCRYPTION);
+        } else {
+            finding.setAlgorithm(rawAlgorithm);
+            finding.setVariant(transformation);
         }
     }
 

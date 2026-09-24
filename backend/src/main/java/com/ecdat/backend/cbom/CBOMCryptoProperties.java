@@ -7,6 +7,8 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 public class CBOMCryptoProperties {
     private String algorithm;
     private String algorithmVariant;
+    private String mode;
+    private String padding;
     private String purpose;
     private Integer keySize;
     private String protocol;
@@ -55,7 +57,19 @@ public class CBOMCryptoProperties {
                                 CBOMRiskInfo risk, CBOMPQCInfo pqcRecommendation,
                                 String assetCategory, String usageCategory, String lifecycleStatus,
                                 String businessCriticality, String dataSensitivity) {
+        this(algorithm, algorithmVariant, null, null, purpose, keySize, protocol, library, sourceFile, sourceLine, evidence, confidence, sourceType, risk, pqcRecommendation, assetCategory, usageCategory, lifecycleStatus, businessCriticality, dataSensitivity);
+    }
+
+    public CBOMCryptoProperties(String algorithm, String algorithmVariant, String mode, String padding,
+                                String purpose, Integer keySize,
+                                String protocol, String library, String sourceFile, Integer sourceLine,
+                                String evidence, String confidence, String sourceType,
+                                CBOMRiskInfo risk, CBOMPQCInfo pqcRecommendation,
+                                String assetCategory, String usageCategory, String lifecycleStatus,
+                                String businessCriticality, String dataSensitivity) {
         this(algorithm, algorithmVariant, purpose, keySize, protocol, library, sourceFile, sourceLine, evidence, confidence, sourceType, risk, pqcRecommendation);
+        this.mode = mode;
+        this.padding = padding;
         this.assetCategory = assetCategory;
         this.usageCategory = usageCategory;
         this.lifecycleStatus = lifecycleStatus;
@@ -65,6 +79,8 @@ public class CBOMCryptoProperties {
 
     public String getAlgorithm() { return algorithm; }
     public String getAlgorithmVariant() { return algorithmVariant; }
+    public String getMode() { return mode; }
+    public String getPadding() { return padding; }
     public String getPurpose() { return purpose; }
     public Integer getKeySize() { return keySize; }
     public String getProtocol() { return protocol; }
@@ -86,6 +102,8 @@ public class CBOMCryptoProperties {
     // Setters for Jackson deserialization
     public void setAlgorithm(String algorithm) { this.algorithm = algorithm; }
     public void setAlgorithmVariant(String algorithmVariant) { this.algorithmVariant = algorithmVariant; }
+    public void setMode(String mode) { this.mode = mode; }
+    public void setPadding(String padding) { this.padding = padding; }
     public void setPurpose(String purpose) { this.purpose = purpose; }
     public void setKeySize(Integer keySize) { this.keySize = keySize; }
     public void setProtocol(String protocol) { this.protocol = protocol; }

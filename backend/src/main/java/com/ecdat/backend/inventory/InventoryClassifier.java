@@ -41,6 +41,8 @@ public class InventoryClassifier {
         CryptoAsset asset = new CryptoAsset();
         asset.setAlgorithm(finding.getAlgorithm());
         asset.setVariant(finding.getVariant());
+        asset.setMode(finding.getMode());
+        asset.setPadding(finding.getPadding());
         asset.setPurpose(finding.getPurpose());
         asset.setKeySize(finding.getKeySize());
         asset.setProtocol(protocol);

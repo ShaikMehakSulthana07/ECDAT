@@ -263,6 +263,28 @@ class CBOMGeneratorTest {
         assertNotNull(root);
     }
 
+    // Test 14 — Mode and padding preservation in CBOM
+    @Test
+    void testModeAndPaddingInCBOM() throws IOException {
+        CryptoFinding finding = createFinding("AES", CryptoFinding.Purpose.ENCRYPTION);
+        finding.setMode("GCM");
+        finding.setPadding("NoPadding");
+        RiskAssessment assessment = createAssessment(finding, 10, RiskLevel.LOW, QuantumRisk.NONE);
+
+        List<RiskAssessment> assessments = List.of(assessment);
+        CBOMDocument document = generator.generate(assessments, new ArrayList<>());
+
+        CBOMComponent component = document.getComponents().get(0);
+        assertEquals("GCM", component.getCryptoProperties().getMode());
+        assertEquals("NoPadding", component.getCryptoProperties().getPadding());
+
+        String json = generator.toJson(document);
+        JsonNode root = objectMapper.readTree(json);
+        JsonNode cryptoProps = root.get("components").get(0).get("cryptoProperties");
+        assertEquals("GCM", cryptoProps.get("mode").asText());
+        assertEquals("NoPadding", cryptoProps.get("padding").asText());
+    }
+
     // Helper methods
     private CryptoFinding createFinding(String algorithm, CryptoFinding.Purpose purpose) {
         CryptoFinding finding = new CryptoFinding();

@@ -12,6 +12,8 @@ public class CryptoAsset {
     private String assetId;
     private String algorithm;
     private String variant;
+    private String mode;
+    private String padding;
     private CryptoFinding.Purpose purpose;
     private Integer keySize;
     private String protocol;
@@ -73,6 +75,10 @@ public class CryptoAsset {
 
     public String getVariant() { return variant; }
     public void setVariant(String variant) { this.variant = variant; }
+    public String getMode() { return mode; }
+    public void setMode(String mode) { this.mode = mode; }
+    public String getPadding() { return padding; }
+    public void setPadding(String padding) { this.padding = padding; }
 
     public CryptoFinding.Purpose getPurpose() { return purpose; }
     public void setPurpose(CryptoFinding.Purpose purpose) { this.purpose = purpose; }

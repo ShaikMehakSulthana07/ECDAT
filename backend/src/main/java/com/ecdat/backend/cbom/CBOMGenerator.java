@@ -65,6 +65,8 @@ public class CBOMGenerator {
         CBOMCryptoProperties cryptoProperties = new CBOMCryptoProperties(
             finding.getAlgorithm(),
             finding.getVariant(),
+            finding.getMode(),
+            finding.getPadding(),
             finding.getPurpose() != null ? finding.getPurpose().name() : null,
             finding.getKeySize(),
             finding.getProtocol(),
@@ -88,6 +90,12 @@ public class CBOMGenerator {
         // Add ECDAT-specific properties as custom properties
         component.addProperty("ecdat:risk_assessment_version", "prototype");
         component.addProperty("ecdat:confidence_preserved", "true");
+        if (finding.getMode() != null) {
+            component.addProperty("ecdat:mode", finding.getMode());
+        }
+        if (finding.getPadding() != null) {
+            component.addProperty("ecdat:padding", finding.getPadding());
+        }
         if (assetCategoryStr != null) {
             component.addProperty("ecdat:asset_category", assetCategoryStr);
         }
