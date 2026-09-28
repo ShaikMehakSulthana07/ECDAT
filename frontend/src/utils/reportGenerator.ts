@@ -298,7 +298,7 @@ export function generateExecutiveReportHtml(analysisData: AnalysisResponse): str
     <div class="meta-box">
       <div>Target: <span class="meta-target">${escapeHtml(targetName)}</span></div>
       <div>Generated: <strong>${dateStr}</strong></div>
-      <div>Spec: <strong>CycloneDX 1.6 / NIST FIPS 203 &amp; 204</strong></div>
+      <div>Spec: <strong>CycloneDX 1.6-Inspired / NIST FIPS 203 &amp; 204</strong></div>
     </div>
   </div>
 

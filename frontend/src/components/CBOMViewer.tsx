@@ -125,7 +125,7 @@ export const CBOMViewer: React.FC<CBOMViewerProps> = ({ cbom }) => {
       <div className="view-header">
         <div className="view-title-group">
           <h1 className="view-title">Cryptographic Bill of Materials</h1>
-          <p className="view-subtitle">CycloneDX-inspired structure with cryptographic extensions</p>
+          <p className="view-subtitle">CycloneDX 1.6-aligned structure with custom cryptographic properties (not schema-compliant)</p>
         </div>
         <div className="view-actions">
           <button className="btn-secondary" onClick={() => setViewMode(viewMode === 'components' ? 'json' : 'components')}>
@@ -371,7 +371,7 @@ export const CBOMViewer: React.FC<CBOMViewerProps> = ({ cbom }) => {
         <div className="card-panel">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
             <span className="font-mono text-muted" style={{ fontSize: '12px' }}>
-              CycloneDX-Inspired CBOM Document JSON
+              CycloneDX-Aligned CBOM Document JSON (not schema-compliant)
             </span>
             <button className="btn-secondary btn-sm" onClick={handleCopyJson}>
               {copied ? '✓ Copied' : 'Copy JSON'}

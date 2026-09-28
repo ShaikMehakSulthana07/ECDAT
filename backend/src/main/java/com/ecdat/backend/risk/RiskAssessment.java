@@ -14,6 +14,7 @@ public class RiskAssessment {
     private final CryptoFinding.Confidence confidence;
     private final CryptoFinding originalFinding;
     private QuantumRiskResult quantumRiskResult;
+    private RiskScoreBreakdown scoreBreakdown;
 
     public RiskAssessment(int riskScore, List<RiskFactor> factors, QuantumRisk quantumRisk, 
                          CryptoFinding.Confidence confidence, CryptoFinding originalFinding) {
@@ -34,6 +35,37 @@ public class RiskAssessment {
         if (confidence == CryptoFinding.Confidence.LOW) {
             reasons.add("Risk assessment is affected by low-confidence static analysis.");
         }
+        
+        // Generate score breakdown
+        this.scoreBreakdown = generateScoreBreakdown();
+    }
+
+    private RiskScoreBreakdown generateScoreBreakdown() {
+        List<RiskScoreBreakdown.ScoreComponent> components = new ArrayList<>();
+        
+        for (RiskFactor factor : factors) {
+            String category = determineCategory(factor.getName());
+            components.add(new RiskScoreBreakdown.ScoreComponent(
+                factor.getName(),
+                factor.getScore(),
+                factor.getExplanation(),
+                category
+            ));
+        }
+        
+        return new RiskScoreBreakdown(riskScore, riskLevel, components);
+    }
+
+    private String determineCategory(String factorName) {
+        if (factorName.contains("QUANTUM")) return "Quantum Vulnerability";
+        if (factorName.contains("KEY_SIZE")) return "Key Size";
+        if (factorName.contains("CRYPTOGRAPHIC_CONCERN") || factorName.contains("PUBLIC_KEY") || 
+            factorName.contains("SYMMETRIC") || factorName.contains("HASH")) return "Algorithm Strength";
+        if (factorName.contains("DATA_SENSITIVITY")) return "Data Sensitivity";
+        if (factorName.contains("BUSINESS_CRITICALITY")) return "Business Criticality";
+        if (factorName.contains("PURPOSE")) return "Usage Context";
+        if (factorName.contains("DEPRECATED") || factorName.contains("BROKEN")) return "Algorithm Status";
+        return "Other";
     }
 
     public int getRiskScore() {
@@ -70,6 +102,10 @@ public class RiskAssessment {
 
     public void setQuantumRiskResult(QuantumRiskResult quantumRiskResult) {
         this.quantumRiskResult = quantumRiskResult;
+    }
+
+    public RiskScoreBreakdown getScoreBreakdown() {
+        return scoreBreakdown;
     }
 
     @Override

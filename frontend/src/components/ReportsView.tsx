@@ -181,7 +181,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ analysisData, onNaviga
       setFeedback({
         type: 'success',
         message: 'CBOM Report exported successfully.',
-        details: `Downloaded ${fileName} (${sizeKb}) in CycloneDX 1.6 format.`,
+        details: `Downloaded ${fileName} (${sizeKb}) in CycloneDX 1.6-inspired format.`,
       });
     } catch (err: unknown) {
       const errorMsg = err instanceof Error ? err.message : String(err);
@@ -526,7 +526,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ analysisData, onNaviga
               </p>
 
               <div className="report-feature-pills">
-                <span className="feature-pill">CycloneDX 1.6 Standard</span>
+                <span className="feature-pill">CycloneDX 1.6-Inspired</span>
                 <span className="feature-pill">Crypto Extensions</span>
                 <span className="feature-pill">Algorithm Metadata</span>
                 <span className="feature-pill">Machine-Readable</span>

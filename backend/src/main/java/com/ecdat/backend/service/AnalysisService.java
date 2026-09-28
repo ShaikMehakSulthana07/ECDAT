@@ -14,9 +14,11 @@ import com.ecdat.backend.input.InputAdapterRegistry;
 import com.ecdat.backend.input.ScanRequest;
 import com.ecdat.backend.input.ScanWorkspace;
 import com.ecdat.backend.input.UnsupportedInputException;
+import com.ecdat.backend.inventory.BusinessCriticality;
 import com.ecdat.backend.inventory.CryptoAsset;
 import com.ecdat.backend.inventory.CryptoInventory;
 import com.ecdat.backend.inventory.CryptoUsageCategory;
+import com.ecdat.backend.inventory.DataSensitivity;
 import com.ecdat.backend.inventory.InventoryClassifier;
 import com.ecdat.backend.inventory.LifecycleStatus;
 import com.ecdat.backend.pqc.PQCRecommendation;
@@ -317,36 +319,6 @@ public class AnalysisService {
         }
 
         // Apply business context to findings
-        try {
-            Path scanPath = Paths.get(scanDirectory);
-            if (Files.isDirectory(scanPath)) {
-                List<CryptoFinding> binaryFindings = binaryScanner.scanDirectory(scanPath);
-                findings.addAll(binaryFindings);
-            }
-        } catch (IOException e) {
-            // Log but don't fail the entire analysis if binary scanning fails
-            logger.warn("Binary file scanning failed: {}", e.getMessage());
-        }
-
-        // Phase 1.9 — Container Image Discovery (if input is container)
-        try {
-            Path scanPath = Paths.get(scanDirectory);
-            if (Files.isDirectory(scanPath)) {
-                // Check if this is a container image by looking for manifest.json
-                Path manifestPath = scanPath.resolve("manifest.json");
-                if (Files.exists(manifestPath)) {
-                    logger.info("Container image detected, scanning artifacts...");
-                    List<CryptoFinding> containerFindings = containerImageScanner.scanExtractedImage(scanPath, displayPath);
-                    findings.addAll(containerFindings);
-                    logger.info("Container image scan added {} findings", containerFindings.size());
-                }
-            }
-        } catch (IOException e) {
-            // Log but don't fail the entire analysis if container scanning fails
-            logger.warn("Container image scanning failed: {}", e.getMessage());
-        }
-
-        // Apply business context to findings
         applyContextToFindings(findings, context);
 
         // Phase 7 Layer — Inventory Classification
@@ -355,7 +327,10 @@ public class AnalysisService {
         // Phase 2 — Risk Assessment
         List<RiskAssessment> riskAssessments = new ArrayList<>();
         for (CryptoFinding finding : findings) {
-            RiskAssessment assessment = riskEngine.assessRisk(finding);
+            // Pass business context to risk engine for more accurate scoring
+            BusinessCriticality businessCriticality = context != null ? context.getBusinessCriticality() : null;
+            DataSensitivity dataSensitivity = context != null ? context.getDataSensitivity() : null;
+            RiskAssessment assessment = riskEngine.assessRisk(finding, businessCriticality, dataSensitivity);
             riskAssessments.add(assessment);
         }
 

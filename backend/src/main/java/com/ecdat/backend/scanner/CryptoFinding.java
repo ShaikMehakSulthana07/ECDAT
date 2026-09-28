@@ -5,6 +5,7 @@ import com.ecdat.backend.inventory.BusinessCriticality;
 import com.ecdat.backend.inventory.CryptoUsageCategory;
 import com.ecdat.backend.inventory.DataSensitivity;
 import com.ecdat.backend.inventory.LifecycleStatus;
+import com.ecdat.backend.provenance.Provenance;
 import com.fasterxml.jackson.annotation.JsonInclude;
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
@@ -42,6 +43,14 @@ public class CryptoFinding {
     private String containerImage;
     private String layerId;
     private String artifactName;
+
+    // Provenance fields for key attributes
+    private Provenance algorithmProvenance = Provenance.OBSERVED;
+    private Provenance keySizeProvenance = Provenance.OBSERVED;
+    private Provenance purposeProvenance = Provenance.OBSERVED;
+    private Provenance libraryProvenance = Provenance.OBSERVED;
+    private Provenance businessCriticalityProvenance = Provenance.UNKNOWN;
+    private Provenance dataSensitivityProvenance = Provenance.UNKNOWN;
 
     // Getters and Setters
     public String getAlgorithm() { return algorithm; }
@@ -89,4 +98,18 @@ public class CryptoFinding {
     public void setLayerId(String layerId) { this.layerId = layerId; }
     public String getArtifactName() { return artifactName; }
     public void setArtifactName(String artifactName) { this.artifactName = artifactName; }
+
+    // Provenance getters/setters
+    public Provenance getAlgorithmProvenance() { return algorithmProvenance; }
+    public void setAlgorithmProvenance(Provenance algorithmProvenance) { this.algorithmProvenance = algorithmProvenance; }
+    public Provenance getKeySizeProvenance() { return keySizeProvenance; }
+    public void setKeySizeProvenance(Provenance keySizeProvenance) { this.keySizeProvenance = keySizeProvenance; }
+    public Provenance getPurposeProvenance() { return purposeProvenance; }
+    public void setPurposeProvenance(Provenance purposeProvenance) { this.purposeProvenance = purposeProvenance; }
+    public Provenance getLibraryProvenance() { return libraryProvenance; }
+    public void setLibraryProvenance(Provenance libraryProvenance) { this.libraryProvenance = libraryProvenance; }
+    public Provenance getBusinessCriticalityProvenance() { return businessCriticalityProvenance; }
+    public void setBusinessCriticalityProvenance(Provenance businessCriticalityProvenance) { this.businessCriticalityProvenance = businessCriticalityProvenance; }
+    public Provenance getDataSensitivityProvenance() { return dataSensitivityProvenance; }
+    public void setDataSensitivityProvenance(Provenance dataSensitivityProvenance) { this.dataSensitivityProvenance = dataSensitivityProvenance; }
 }

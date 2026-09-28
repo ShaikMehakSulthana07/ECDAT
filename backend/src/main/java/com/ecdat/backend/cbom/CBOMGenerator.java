@@ -85,6 +85,13 @@ public class CBOMGenerator {
             dataSensitivityStr
         );
 
+        // Preserve provenance from CryptoFinding
+        cryptoProperties.setAlgorithmProvenance(finding.getAlgorithmProvenance());
+        cryptoProperties.setKeySizeProvenance(finding.getKeySizeProvenance());
+        cryptoProperties.setPurposeProvenance(finding.getPurposeProvenance());
+        cryptoProperties.setBusinessCriticalityProvenance(finding.getBusinessCriticalityProvenance());
+        cryptoProperties.setDataSensitivityProvenance(finding.getDataSensitivityProvenance());
+
         CBOMComponent component = new CBOMComponent(componentName, description, cryptoProperties);
 
         // Add ECDAT-specific properties as custom properties
@@ -162,6 +169,8 @@ public class CBOMGenerator {
         
         // Populate quantum migration risk details if available
         if (assessment.getQuantumRiskResult() != null) {
+            riskInfo.setQuantumVulnerabilityStatus(assessment.getQuantumRiskResult().getQuantumVulnerabilityStatus() != null ?
+                assessment.getQuantumRiskResult().getQuantumVulnerabilityStatus().name() : null);
             riskInfo.setQuantumVulnerable(assessment.getQuantumRiskResult().isQuantumVulnerable());
             riskInfo.setMigrationRequired(assessment.getQuantumRiskResult().isMigrationRequired());
             riskInfo.setDataLifetimeYears(assessment.getQuantumRiskResult().getDataLifetimeYears());
@@ -169,10 +178,22 @@ public class CBOMGenerator {
             riskInfo.setThreatHorizonYears(assessment.getQuantumRiskResult().getThreatHorizonYears());
             riskInfo.setMoscaConditionMet(assessment.getQuantumRiskResult().isMoscaConditionMet());
             riskInfo.setTotalExposureYears(assessment.getQuantumRiskResult().getTotalExposureYears());
-            riskInfo.setMigrationUrgency(assessment.getQuantumRiskResult().getMigrationUrgency() != null ? 
+            riskInfo.setMigrationUrgency(assessment.getQuantumRiskResult().getMigrationUrgency() != null ?
                 assessment.getQuantumRiskResult().getMigrationUrgency().name() : null);
             riskInfo.setQuantumRiskExplanation(assessment.getQuantumRiskResult().getExplanation());
             riskInfo.setMoscaCalculationDetails(assessment.getQuantumRiskResult().getCalculationDetails());
+            
+            // Populate value source attribution
+            riskInfo.setDataLifetimeYearsSource(assessment.getQuantumRiskResult().getDataLifetimeYearsSource() != null ?
+                assessment.getQuantumRiskResult().getDataLifetimeYearsSource().name() : null);
+            riskInfo.setMigrationTimeYearsSource(assessment.getQuantumRiskResult().getMigrationTimeYearsSource() != null ?
+                assessment.getQuantumRiskResult().getMigrationTimeYearsSource().name() : null);
+            riskInfo.setThreatHorizonYearsSource(assessment.getQuantumRiskResult().getThreatHorizonYearsSource() != null ?
+                assessment.getQuantumRiskResult().getThreatHorizonYearsSource().name() : null);
+            riskInfo.setBusinessCriticalitySource(assessment.getQuantumRiskResult().getBusinessCriticalitySource() != null ?
+                assessment.getQuantumRiskResult().getBusinessCriticalitySource().name() : null);
+            riskInfo.setDataSensitivitySource(assessment.getQuantumRiskResult().getDataSensitivitySource() != null ?
+                assessment.getQuantumRiskResult().getDataSensitivitySource().name() : null);
         }
         
         return riskInfo;

@@ -5,7 +5,7 @@ interface CryptoInventoryViewProps {
   findings: CryptoFinding[];
   riskAssessments: RiskAssessment[];
   pqcRecommendations: PQCRecommendation[];
-  onSelectFinding: (index: number) => void;
+  onSelectFinding: (index: number, tab?: 'overview' | 'mosca' | 'pqc' | 'evidence' | 'why_risky') => void;
   selectedIndex: number | null;
   searchQuery?: string;
 }
@@ -304,15 +304,28 @@ export const CryptoInventoryView: React.FC<CryptoInventoryViewProps> = ({
                         </div>
                       </td>
                       <td style={{ textAlign: 'right' }}>
-                        <button
-                          className="btn-secondary btn-sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onSelectFinding(index);
-                          }}
-                        >
-                          View
-                        </button>
+                        <div style={{ display: 'inline-flex', gap: '6px', alignItems: 'center' }}>
+                          <button
+                            className="btn-secondary btn-sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onSelectFinding(index, 'why_risky');
+                            }}
+                            title="Why is this risky? View 8-step evidence chain"
+                            style={{ borderColor: 'var(--primary-border)', color: 'var(--accent-purple)' }}
+                          >
+                            Why Risky?
+                          </button>
+                          <button
+                            className="btn-secondary btn-sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onSelectFinding(index);
+                            }}
+                          >
+                            View
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );

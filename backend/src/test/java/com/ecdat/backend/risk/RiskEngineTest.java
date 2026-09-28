@@ -1,5 +1,7 @@
 package com.ecdat.backend.risk;
 
+import com.ecdat.backend.inventory.BusinessCriticality;
+import com.ecdat.backend.inventory.DataSensitivity;
 import com.ecdat.backend.scanner.CryptoFinding;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
@@ -401,5 +403,186 @@ public class RiskEngineTest {
 
         assertTrue(assessment.getRiskScore() >= 0, 
             "Risk score should not be negative");
+    }
+
+    @Test
+    void testBusinessContextFactors() {
+        CryptoFinding finding = new CryptoFinding();
+        finding.setAlgorithm("RSA");
+        finding.setKeySize(2048);
+        finding.setPurpose(CryptoFinding.Purpose.ENCRYPTION);
+        finding.setConfidence(CryptoFinding.Confidence.HIGH);
+        finding.setFile("Test.java");
+        finding.setLine(10);
+        finding.setEvidence("Cipher.getInstance(\"RSA\")");
+
+        // Test with high business criticality and high data sensitivity
+        RiskAssessment assessment = riskEngine.assessRisk(
+            finding, 
+            BusinessCriticality.CRITICAL, 
+            DataSensitivity.HIGHLY_SENSITIVE
+        );
+
+        // Should have business context factors
+        assertTrue(assessment.getFactors().stream().anyMatch(f -> 
+            f.getName().equals("DATA_SENSITIVITY")));
+        assertTrue(assessment.getFactors().stream().anyMatch(f -> 
+            f.getName().equals("BUSINESS_CRITICALITY")));
+        
+        // Score should be higher than without business context
+        RiskAssessment baseAssessment = riskEngine.assessRisk(finding);
+        assertTrue(assessment.getRiskScore() > baseAssessment.getRiskScore(),
+            "Business context should increase risk score");
+    }
+
+    @Test
+    void testBusinessContextLowImpact() {
+        CryptoFinding finding = new CryptoFinding();
+        finding.setAlgorithm("RSA");
+        finding.setKeySize(2048);
+        finding.setPurpose(CryptoFinding.Purpose.ENCRYPTION);
+        finding.setConfidence(CryptoFinding.Confidence.HIGH);
+        finding.setFile("Test.java");
+        finding.setLine(10);
+        finding.setEvidence("Cipher.getInstance(\"RSA\")");
+
+        // Test with low business criticality and public data
+        RiskAssessment assessment = riskEngine.assessRisk(
+            finding, 
+            BusinessCriticality.LOW, 
+            DataSensitivity.PUBLIC
+        );
+
+        // Should have business context factors with low or zero scores
+        assertTrue(assessment.getFactors().stream().anyMatch(f -> 
+            f.getName().equals("DATA_SENSITIVITY")));
+        assertTrue(assessment.getFactors().stream().anyMatch(f -> 
+            f.getName().equals("BUSINESS_CRITICALITY")));
+        
+        // Score should be lower than with high context
+        RiskAssessment highAssessment = riskEngine.assessRisk(
+            finding, 
+            BusinessCriticality.CRITICAL, 
+            DataSensitivity.HIGHLY_SENSITIVE
+        );
+        assertTrue(assessment.getRiskScore() < highAssessment.getRiskScore(),
+            "Low business context should decrease risk score");
+    }
+
+    @Test
+    void testScoreBreakdownGeneration() {
+        CryptoFinding finding = new CryptoFinding();
+        finding.setAlgorithm("RSA");
+        finding.setKeySize(2048);
+        finding.setPurpose(CryptoFinding.Purpose.ENCRYPTION);
+        finding.setConfidence(CryptoFinding.Confidence.HIGH);
+        finding.setFile("Test.java");
+        finding.setLine(10);
+        finding.setEvidence("Cipher.getInstance(\"RSA\")");
+
+        RiskAssessment assessment = riskEngine.assessRisk(finding);
+
+        assertNotNull(assessment.getScoreBreakdown());
+        assertEquals(assessment.getRiskScore(), assessment.getScoreBreakdown().getTotalScore());
+        assertEquals(assessment.getRiskLevel(), assessment.getScoreBreakdown().getRiskLevel());
+        assertNotNull(assessment.getScoreBreakdown().getMethodologyNote());
+        assertTrue(assessment.getScoreBreakdown().getMethodologyNote().contains("heuristic"));
+        
+        // Components should match factors
+        assertFalse(assessment.getScoreBreakdown().getComponents().isEmpty());
+        
+        // Sum of component scores should equal total score
+        int componentSum = assessment.getScoreBreakdown().getComponents().stream()
+            .mapToInt(RiskScoreBreakdown.ScoreComponent::getScore)
+            .sum();
+        assertEquals(componentSum, assessment.getRiskScore());
+    }
+
+    @Test
+    void testScoreDeterminism() {
+        CryptoFinding finding = new CryptoFinding();
+        finding.setAlgorithm("RSA");
+        finding.setKeySize(2048);
+        finding.setPurpose(CryptoFinding.Purpose.ENCRYPTION);
+        finding.setConfidence(CryptoFinding.Confidence.HIGH);
+        finding.setFile("Test.java");
+        finding.setLine(10);
+        finding.setEvidence("Cipher.getInstance(\"RSA\")");
+
+        RiskAssessment assessment1 = riskEngine.assessRisk(finding);
+        RiskAssessment assessment2 = riskEngine.assessRisk(finding);
+
+        // Same input should produce same score
+        assertEquals(assessment1.getRiskScore(), assessment2.getRiskScore());
+        assertEquals(assessment1.getRiskLevel(), assessment2.getRiskLevel());
+        assertEquals(assessment1.getFactors().size(), assessment2.getFactors().size());
+    }
+
+    @Test
+    void testScoreBreakdownWithBusinessContext() {
+        CryptoFinding finding = new CryptoFinding();
+        finding.setAlgorithm("RSA");
+        finding.setKeySize(2048);
+        finding.setPurpose(CryptoFinding.Purpose.ENCRYPTION);
+        finding.setConfidence(CryptoFinding.Confidence.HIGH);
+        finding.setFile("Test.java");
+        finding.setLine(10);
+        finding.setEvidence("Cipher.getInstance(\"RSA\")");
+
+        RiskAssessment assessment = riskEngine.assessRisk(
+            finding, 
+            BusinessCriticality.HIGH, 
+            DataSensitivity.CONFIDENTIAL
+        );
+
+        RiskScoreBreakdown breakdown = assessment.getScoreBreakdown();
+        
+        // Should have components for business context
+        assertTrue(breakdown.getComponents().stream().anyMatch(c -> 
+            c.getCategory().equals("Data Sensitivity")));
+        assertTrue(breakdown.getComponents().stream().anyMatch(c -> 
+            c.getCategory().equals("Business Criticality")));
+    }
+
+    @Test
+    void testScoreBoundary_Zero() {
+        CryptoFinding finding = new CryptoFinding();
+        finding.setAlgorithm("AES");
+        finding.setVariant("AES-256");
+        finding.setPurpose(CryptoFinding.Purpose.ENCRYPTION);
+        finding.setConfidence(CryptoFinding.Confidence.HIGH);
+        finding.setFile("Test.java");
+        finding.setLine(10);
+        finding.setEvidence("Cipher.getInstance(\"AES-256\")");
+
+        RiskAssessment assessment = riskEngine.assessRisk(
+            finding, 
+            BusinessCriticality.LOW, 
+            DataSensitivity.PUBLIC
+        );
+
+        // Score should be at minimum 0
+        assertTrue(assessment.getRiskScore() >= 0);
+    }
+
+    @Test
+    void testScoreBoundary_Maximum() {
+        CryptoFinding finding = new CryptoFinding();
+        finding.setAlgorithm("MD5");
+        finding.setVariant("MD5");
+        finding.setPurpose(CryptoFinding.Purpose.HASHING);
+        finding.setConfidence(CryptoFinding.Confidence.HIGH);
+        finding.setFile("Test.java");
+        finding.setLine(10);
+        finding.setEvidence("MessageDigest.getInstance(\"MD5\")");
+
+        RiskAssessment assessment = riskEngine.assessRisk(
+            finding, 
+            BusinessCriticality.CRITICAL, 
+            DataSensitivity.HIGHLY_SENSITIVE
+        );
+
+        // Score should be capped at 100
+        assertTrue(assessment.getRiskScore() <= 100);
     }
 }

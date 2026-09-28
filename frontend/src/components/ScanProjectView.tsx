@@ -294,7 +294,7 @@ export const ScanProjectView: React.FC<ScanProjectViewProps> = ({
                 <span className="scan-step-icon">○</span>
                 <div className="scan-step-info">
                   <span className="scan-step-name">CBOM Generation</span>
-                  <span className="scan-step-desc">Compiling CycloneDX 1.6 Cryptographic Bill of Materials</span>
+                  <span className="scan-step-desc">Compiling CycloneDX 1.6-inspired Cryptographic Bill of Materials</span>
                 </div>
                 <span className="scan-step-status">Queued</span>
               </div>

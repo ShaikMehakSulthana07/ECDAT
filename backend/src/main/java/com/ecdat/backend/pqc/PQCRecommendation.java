@@ -1,5 +1,6 @@
 package com.ecdat.backend.pqc;
 
+import com.ecdat.backend.provenance.Provenance;
 import com.ecdat.backend.risk.QuantumRisk;
 import com.ecdat.backend.scanner.CryptoFinding;
 import java.util.ArrayList;
@@ -17,6 +18,11 @@ public class PQCRecommendation {
     private final QuantumRisk quantumRisk;
     private final CryptoFinding.Confidence confidence;
     private final List<String> considerations;
+
+    // Provenance fields for recommendation attributes
+    private Provenance recommendationStatusProvenance = Provenance.INFERRED;
+    private Provenance recommendedAlgorithmProvenance = Provenance.INFERRED;
+    private Provenance migrationPriorityProvenance = Provenance.INFERRED;
 
     public PQCRecommendation(PQCRecommendationStatus recommendationStatus,
                            String currentAlgorithm,
@@ -101,6 +107,14 @@ public class PQCRecommendation {
     public List<String> getConsiderations() {
         return new ArrayList<>(considerations);
     }
+
+    // Provenance getters/setters
+    public Provenance getRecommendationStatusProvenance() { return recommendationStatusProvenance; }
+    public void setRecommendationStatusProvenance(Provenance recommendationStatusProvenance) { this.recommendationStatusProvenance = recommendationStatusProvenance; }
+    public Provenance getRecommendedAlgorithmProvenance() { return recommendedAlgorithmProvenance; }
+    public void setRecommendedAlgorithmProvenance(Provenance recommendedAlgorithmProvenance) { this.recommendedAlgorithmProvenance = recommendedAlgorithmProvenance; }
+    public Provenance getMigrationPriorityProvenance() { return migrationPriorityProvenance; }
+    public void setMigrationPriorityProvenance(Provenance migrationPriorityProvenance) { this.migrationPriorityProvenance = migrationPriorityProvenance; }
 
     @Override
     public String toString() {

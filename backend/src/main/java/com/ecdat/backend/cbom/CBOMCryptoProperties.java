@@ -1,6 +1,7 @@
 package com.ecdat.backend.cbom;
 
 import com.ecdat.backend.inventory.LifecycleStatus;
+import com.ecdat.backend.provenance.Provenance;
 import com.fasterxml.jackson.annotation.JsonInclude;
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
@@ -27,6 +28,13 @@ public class CBOMCryptoProperties {
     private String lifecycleStatus;
     private String businessCriticality;
     private String dataSensitivity;
+
+    // Provenance fields for key attributes
+    private Provenance algorithmProvenance;
+    private Provenance keySizeProvenance;
+    private Provenance purposeProvenance;
+    private Provenance businessCriticalityProvenance;
+    private Provenance dataSensitivityProvenance;
 
     // Default constructor for Jackson deserialization
     public CBOMCryptoProperties() {
@@ -122,4 +130,16 @@ public class CBOMCryptoProperties {
     public void setLifecycleStatus(String lifecycleStatus) { this.lifecycleStatus = lifecycleStatus; }
     public void setBusinessCriticality(String businessCriticality) { this.businessCriticality = businessCriticality; }
     public void setDataSensitivity(String dataSensitivity) { this.dataSensitivity = dataSensitivity; }
+
+    // Provenance getters/setters
+    public Provenance getAlgorithmProvenance() { return algorithmProvenance; }
+    public void setAlgorithmProvenance(Provenance algorithmProvenance) { this.algorithmProvenance = algorithmProvenance; }
+    public Provenance getKeySizeProvenance() { return keySizeProvenance; }
+    public void setKeySizeProvenance(Provenance keySizeProvenance) { this.keySizeProvenance = keySizeProvenance; }
+    public Provenance getPurposeProvenance() { return purposeProvenance; }
+    public void setPurposeProvenance(Provenance purposeProvenance) { this.purposeProvenance = purposeProvenance; }
+    public Provenance getBusinessCriticalityProvenance() { return businessCriticalityProvenance; }
+    public void setBusinessCriticalityProvenance(Provenance businessCriticalityProvenance) { this.businessCriticalityProvenance = businessCriticalityProvenance; }
+    public Provenance getDataSensitivityProvenance() { return dataSensitivityProvenance; }
+    public void setDataSensitivityProvenance(Provenance dataSensitivityProvenance) { this.dataSensitivityProvenance = dataSensitivityProvenance; }
 }

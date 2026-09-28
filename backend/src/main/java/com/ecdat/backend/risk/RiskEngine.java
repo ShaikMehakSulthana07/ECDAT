@@ -1,5 +1,7 @@
 package com.ecdat.backend.risk;
 
+import com.ecdat.backend.inventory.BusinessCriticality;
+import com.ecdat.backend.inventory.DataSensitivity;
 import com.ecdat.backend.scanner.CryptoFinding;
 import java.util.ArrayList;
 import java.util.List;
@@ -7,6 +9,11 @@ import java.util.List;
 public class RiskEngine {
 
     public RiskAssessment assessRisk(CryptoFinding finding) {
+        return assessRisk(finding, null, null);
+    }
+
+    public RiskAssessment assessRisk(CryptoFinding finding, BusinessCriticality businessCriticality, 
+                                     DataSensitivity dataSensitivity) {
         List<RiskFactor> factors = new ArrayList<>();
         QuantumRisk quantumRisk = QuantumRisk.NONE;
         int totalScore = 0;
@@ -66,13 +73,74 @@ public class RiskEngine {
                 break;
         }
 
+        // Add business context factors if provided
+        if (businessCriticality != null || dataSensitivity != null) {
+            addBusinessContextFactors(factors, businessCriticality, dataSensitivity);
+        }
+
         // Calculate total score from factors
         totalScore = factors.stream().mapToInt(RiskFactor::getScore).sum();
 
         // Cap score at 100
         totalScore = Math.min(totalScore, 100);
 
+        // Ensure minimum score of 0
+        totalScore = Math.max(totalScore, 0);
+
         return new RiskAssessment(totalScore, factors, quantumRisk, finding.getConfidence(), finding);
+    }
+
+    private void addBusinessContextFactors(List<RiskFactor> factors, BusinessCriticality businessCriticality, 
+                                          DataSensitivity dataSensitivity) {
+        // Data sensitivity factor
+        if (dataSensitivity != null) {
+            switch (dataSensitivity) {
+                case HIGHLY_SENSITIVE:
+                    factors.add(new RiskFactor("DATA_SENSITIVITY", 15, 
+                            "Data is marked as highly sensitive, increasing risk impact."));
+                    break;
+                case CONFIDENTIAL:
+                    factors.add(new RiskFactor("DATA_SENSITIVITY", 10, 
+                            "Data is marked as confidential, increasing risk impact."));
+                    break;
+                case INTERNAL:
+                    factors.add(new RiskFactor("DATA_SENSITIVITY", 5, 
+                            "Data is marked as internal use only."));
+                    break;
+                case PUBLIC:
+                    factors.add(new RiskFactor("DATA_SENSITIVITY", 0, 
+                            "Data is marked as public, reducing risk impact."));
+                    break;
+                case UNKNOWN:
+                    // No factor added for unknown
+                    break;
+            }
+        }
+
+        // Business criticality factor
+        if (businessCriticality != null) {
+            switch (businessCriticality) {
+                case CRITICAL:
+                    factors.add(new RiskFactor("BUSINESS_CRITICALITY", 15, 
+                            "System is marked as business-critical, increasing risk impact."));
+                    break;
+                case HIGH:
+                    factors.add(new RiskFactor("BUSINESS_CRITICALITY", 10, 
+                            "System is marked as high importance, increasing risk impact."));
+                    break;
+                case MEDIUM:
+                    factors.add(new RiskFactor("BUSINESS_CRITICALITY", 5, 
+                            "System is marked as medium importance."));
+                    break;
+                case LOW:
+                    factors.add(new RiskFactor("BUSINESS_CRITICALITY", 0, 
+                            "System is marked as low importance, reducing risk impact."));
+                    break;
+                case UNKNOWN:
+                    // No factor added for unknown
+                    break;
+            }
+        }
     }
 
     private void assessRSA(CryptoFinding finding, List<RiskFactor> factors) {

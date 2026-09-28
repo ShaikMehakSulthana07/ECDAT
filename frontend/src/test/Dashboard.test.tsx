@@ -190,12 +190,12 @@ describe('ECDAT Enterprise Frontend Redesign Tests', () => {
     expect(screen.getByText(/Enterprise Cryptographic Discovery & Quantum Risk Intelligence/i)).toBeInTheDocument();
     expect(screen.getByText(/Discover, Analyze, Secure, Quantum Ready/i)).toBeInTheDocument();
     expect(screen.getByText(/Welcome to CRYPTAGUARD/i)).toBeInTheDocument();
-    expect(screen.getByText(/Sign in to access your security analysis workspace/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/^Email Address$/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/^Password$/i)).toBeInTheDocument();
-    expect(screen.getByText(/For demonstration purposes only/i)).toBeInTheDocument();
+    expect(screen.getByText(/Prototype Authentication · Demo Workspace/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Email Address/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Session Passphrase/i)).toBeInTheDocument();
+    expect(screen.getByText(/Prototype Session · Client-side demonstration only/i)).toBeInTheDocument();
 
-    const signInBtn = screen.getByRole('button', { name: /Sign In/i });
+    const signInBtn = screen.getByRole('button', { name: /Enter Demo Workspace/i });
     fireEvent.click(signInBtn);
     expect(handleLogin).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -306,6 +306,11 @@ describe('ECDAT Enterprise Frontend Redesign Tests', () => {
     expect(screen.getByText('Mosca Assessment')).toBeInTheDocument();
     expect(screen.getByText('PQC Recommendation')).toBeInTheDocument();
     expect(screen.getByText('Evidence')).toBeInTheDocument();
+    expect(screen.getByText('Why is this risky?')).toBeInTheDocument();
+
+    const whyRiskyTab = screen.getByRole('button', { name: /Why is this risky\?/i });
+    fireEvent.click(whyRiskyTab);
+    expect(screen.getByText(/10-SECOND VERDICT & REASONING PATH/i)).toBeInTheDocument();
 
     const closeBtn = screen.getByRole('button', { name: /Close Drawer/i });
     fireEvent.click(closeBtn);
@@ -402,16 +407,16 @@ describe('ECDAT Enterprise Frontend Redesign Tests', () => {
     expect(screen.getByText(/Direct Usage/i)).toBeInTheDocument();
   });
 
-  it('10. Phase 12: Renders CBOMViewer with CycloneDX-inspired format & JSON/CSV export', () => {
+  it('10. Phase 12: Renders CBOMViewer with CycloneDX 1.6-inspired format & JSON/CSV export', () => {
     render(<CBOMViewer cbom={mockCBOM} />);
     expect(screen.getByText('Cryptographic Bill of Materials')).toBeInTheDocument();
-    expect(screen.getByText(/CycloneDX-inspired structure/i)).toBeInTheDocument();
+    expect(screen.getByText(/CycloneDX 1\.6-(aligned|inspired) structure/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Download CSV/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Download JSON/i })).toBeInTheDocument();
 
     const rawJsonBtn = screen.getByRole('button', { name: /Raw CBOM JSON/i });
     fireEvent.click(rawJsonBtn);
-    expect(screen.getByText(/CycloneDX-Inspired CBOM Document JSON/i)).toBeInTheDocument();
+    expect(screen.getByText(/CycloneDX-(Aligned|Inspired) CBOM Document JSON/i)).toBeInTheDocument();
   });
 
   it('11. Phase 13 & 14: Renders ReportsView and SettingsView with Theme Toggle', () => {
@@ -435,7 +440,7 @@ describe('ECDAT Enterprise Frontend Redesign Tests', () => {
     expect(screen.getByRole('heading', { name: 'Settings' })).toBeInTheDocument();
     expect(screen.getByText('Account Information')).toBeInTheDocument();
     expect(screen.getByText('Security Analyst')).toBeInTheDocument();
-    expect(screen.getByText(/Local Development Session/i)).toBeInTheDocument();
+    expect(screen.getByText(/Prototype Authentication · Demo Workspace/i)).toBeInTheDocument();
     
     // Switch to Security tab and toggle theme
     const secTab = screen.getByRole('button', { name: /Security & Appearance/i });

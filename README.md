@@ -77,15 +77,16 @@ The frontend will start on `http://localhost:5173`
 - ✅ Risk Engine integration for priority determination
 - ✅ Comprehensive PQC recommendation test suite
 ### Completed (Phase 4 - CBOM Generation)
-- ✅ CycloneDX 1.6-compatible CBOM document model
-- ✅ Structured cryptographic asset representation (`cryptographic-asset`)
+- ✅ CycloneDX 1.6-aligned CBOM document model with custom cryptographic properties (not schema-compliant)
+- ✅ Structured cryptographic asset representation with custom `cryptoProperties` structure
 - ✅ End-to-end pipeline integration (`CryptoFinding` → `RiskAssessment` → `PQCRecommendation` → CBOM)
 - ✅ Source code traceability (source file, line number, code evidence, detection confidence)
-- ✅ Embedded risk information (score, level, quantum risk, risk factors)
+- ✅ Embedded risk information (score, level, quantum risk, risk factors, Mosca calculations)
 - ✅ Embedded PQC recommendations (status, recommended/alternative algorithms, priority, rationale, considerations)
 - ✅ Custom ECDAT metadata properties (`ecdat:risk_assessment_version`, `ecdat:confidence_preserved`)
 - ✅ Deterministic and robust JSON serialization
-- ✅ Comprehensive CBOM test suite
+- ✅ Comprehensive CBOM test suite (18 tests covering serialization, structure, and field preservation)
+- ⚠️ **Note**: CBOM format is CycloneDX-aligned but not schema-compliant. See `CBOM_AUDIT_FINDINGS.md` for detailed compatibility analysis and recommendations.
 
 ### Completed (Phase 5 - Backend API / Pipeline Integration)
 - ✅ Dedicated pipeline orchestration service (`AnalysisService`)
@@ -118,7 +119,7 @@ The frontend will start on `http://localhost:5173`
 - ✅ Evidence-based usage categorization (`DIRECT_USAGE`, `INDIRECT_CONFIGURATION`, `DEPENDENCY_PRESENCE`, `UNKNOWN`)
 - ✅ Lifecycle status classification (`ACTIVE`, `DEPRECATED`, `UNKNOWN`)
 - ✅ Honest enterprise context boundaries (`BusinessCriticality.UNKNOWN` and `DataSensitivity.UNKNOWN` default without fabrication)
-- ✅ CycloneDX 1.6 CBOM integration with custom and standard crypto properties
+- ✅ CycloneDX 1.6-aligned CBOM integration with custom cryptographic properties (not schema-compliant)
 - ✅ End-to-end pipeline integration preserving Phase 2 risk scores and Phase 3 PQC mappings
 - ✅ React dashboard inventory filtering, lifecycle badges, and detailed classification inspection
 - ✅ Comprehensive inventory classification test suite with negative tests (104 backend tests total)
@@ -128,16 +129,15 @@ The frontend will start on `http://localhost:5173`
 - ✅ Normalized analysis request model (`AnalysisInput`) supporting multiple input sources
 - ✅ Normalized artifact representation (`DiscoveredArtifact`) for cross-input consistency
 - ✅ Extensible input processor interface (`AnalysisInputProcessor`)
-- ✅ Implemented processors: `ZipInputProcessor`, `SourceFileInputProcessor`, `DirectoryInputProcessor`, `RepositoryInputProcessor`
-- ✅ Explicit unsupported processors for roadmap types: `UnsupportedInputProcessor` (Configuration, Binary, Container)
+- ✅ Implemented processors: `ZipInputProcessor`, `SourceFileInputProcessor`, `DirectoryInputProcessor`, `RepositoryInputProcessor`, `ConfigurationInputProcessor`, `BinaryInputProcessor`, `ContainerInputProcessor`
 - ✅ Processor registry with capability discovery (`AnalysisInputProcessorRegistry`)
 - ✅ Capabilities endpoint (`GET /api/analyze/capabilities`) returning supported/roadmap status
 - ✅ AnalysisResponse enriched with input metadata (inputType, inputName, inputSource)
 - ✅ Frontend TypeScript types for multi-input architecture
-- ✅ Frontend Scan Project UI with accurate capability states (Available vs Coming Soon)
+- ✅ Frontend Scan Project UI with all input types available
 - ✅ Frontend API service with capability discovery and fallback capabilities
-- ✅ Comprehensive backend tests for input processing architecture (Zip Slip, archive limits, unsupported types)
-- ✅ Frontend API tests for capability discovery and unsupported endpoints
+- ✅ Comprehensive backend tests for input processing architecture (Zip Slip, archive limits, security)
+- ✅ Frontend API tests for capability discovery and all input endpoints
 - ✅ Bug fix: InventoryClassifier now handles JAVA_AST_MAVEN and JAVA_AST_* source types correctly using startsWith()
 - ✅ Bug fix verified: Certificate RSA key size uses modulus bit length (rsaKey.getModulus().bitLength())
 - ✅ Frontend UI update: Directory Path input now includes configuration requirement note
@@ -149,24 +149,64 @@ The frontend will start on `http://localhost:5173`
 - ✅ Resource limits configuration (clone timeout, max repo size, file count, file size)
 - ✅ Repository-specific error types (`RepositoryAnalysisException`) with structured error codes
 - ✅ `RepositoryInputProcessor` implementing the multi-input architecture
-- ✅ Registry updated to register `RepositoryInputProcessor` instead of `UnsupportedInputProcessor`
+- ✅ Registry updated to register `RepositoryInputProcessor`
 - ✅ `AnalysisInputType.REPOSITORY_URL` supported flag set to `true`
 - ✅ New API endpoint `POST /api/analyze/repository` using `AnalysisService.analyze()`
 - ✅ Frontend Scan Project UI enabled Repository URL card with input field
 - ✅ Frontend API service updated to call new repository endpoint
 - ✅ Security tests (URL validation, SSRF with DNS/redirects, Git detection)
 - ✅ Workspace cleanup tests
-- ✅ Backend regression tests: 231/231 passed (baseline 179/179)
+- ✅ Backend regression tests: 334/334 passed (1 skipped)
 - ✅ Frontend regression tests: 32/32 passed
 - ✅ Production frontend build successful
 
+### Completed (Phase 6 - Configuration File Scanning)
+- ✅ Configuration file input processor (`ConfigurationInputProcessor`) supporting .properties, .yml, .yaml, .xml, .conf, .cfg, .ini
+- ✅ Configuration file validation with format checking and size limits (10 MB max)
+- ✅ Configuration finding model (`ConfigurationFinding`) for metadata extraction
+- ✅ API endpoint `POST /api/analyze/configuration` for configuration file upload
+- ✅ Frontend Scan Project UI enabled Configuration File card with file upload
+- ✅ Frontend API service updated to call configuration endpoint
+- ✅ Security tests for configuration file validation
+- ✅ Configuration analysis integration tests
+
+### Completed (Phase 7 - Binary File Scanning)
+- ✅ Binary scanner infrastructure (`BinaryScanner`) with JAR and CLASS file support
+- ✅ JAR binary scanner (`JarBinaryScanner`) for archive analysis
+- ✅ CLASS bytecode analyzer (`BytecodeAnalyzer`) for constant pool inspection
+- ✅ Binary analysis limits configuration (file size, entry count, processing time)
+- ✅ Binary input processor (`BinaryInputProcessor`) for .jar and .class files
+- ✅ API endpoint `POST /api/analyze/binary` for binary file upload
+- ✅ Frontend Scan Project UI enabled Binary File card with file upload
+- ✅ Frontend API service updated to call binary endpoint
+- ✅ Security tests for binary file validation and limits
+- ✅ Binary scanner integration tests with crypto fixture JARs
+- ✅ Bytecode analysis tests for cryptographic constant detection
+
+### Completed (Phase 8 - Container Image Scanning)
+- ✅ Container image scanner (`ContainerImageScanner`) for static Docker/OCI analysis
+- ✅ Docker manifest reader (`DockerManifestReader`) for image metadata parsing
+- ✅ Layer extractor (`LayerExtractor`) with tar extraction and Zip Slip protection
+- ✅ Artifact discovery (`ArtifactDiscovery`) for layer content classification
+- ✅ Container analysis limits (layer count, extraction size, resource bounds)
+- ✅ Container input processor (`ContainerInputProcessor`) for .tar, .tar.gz, .tgz archives
+- ✅ API endpoint `POST /api/analyze/container` for container image upload
+- ✅ Frontend Scan Project UI enabled Container Image card with file upload
+- ✅ Frontend API service updated to call container endpoint
+- ✅ Security tests for container validation, layer limits, and path traversal
+- ✅ Container scanner integration tests with real Docker image archives
+- ✅ NO Docker daemon required - pure static analysis
+- ✅ NO container code execution - safe analysis environment
+
 ### Not Yet Implemented
-- ❌ Configuration file scanning (Planned for Phase 6)
-- ❌ JAR/CLASS binary scanning (Planned for Phase 7)
-- ❌ Container image scanning (Planned for Phase 8)
-- ❌ Authentication and authorization
-- ❌ Database persistence
-- ❌ Automated source-code migration
+- ❌ Authentication and authorization (basic UI login screen exists but no backend auth)
+- ❌ Database persistence (all data is in-memory per request)
+- ❌ Automated source-code migration (advisory recommendations only)
+- ❌ HSM/KMS integration and discovery
+- ❌ Live infrastructure scanning and runtime cryptographic discovery
+- ❌ Cloud service cryptographic inventory (AWS KMS, Azure Key Vault, GCP KMS)
+- ❌ Real-time quantum threat horizon monitoring
+- ❌ Automated PQC migration tooling and code generation
 
 ## Testing
 
@@ -183,15 +223,206 @@ npm test
 npm run build
 ```
 
+## Architecture Overview
+
+```mermaid
+flowchart TD
+    subgraph Inputs["Input Sources"]
+        I1["ZIP Archive (.zip)"]
+        I2["Directory Path"]
+        I3["Repository URL"]
+        I4["Configuration File"]
+        I5["Binary File (.jar, .class)"]
+        I6["Container Image (.tar)"]
+    end
+
+    subgraph API["REST API Layer"]
+        A1["POST /api/analyze"]
+        A2["POST /api/analyze/upload"]
+        A3["POST /api/analyze/repository"]
+        A4["POST /api/analyze/configuration"]
+        A5["POST /api/analyze/binary"]
+        A6["POST /api/analyze/container"]
+        A7["GET /api/analyze/capabilities"]
+        A8["GET /health"]
+    end
+
+    subgraph Processors["Input Processors"]
+        P1["ZipInputProcessor"]
+        P2["DirectoryInputProcessor"]
+        P3["RepositoryInputProcessor"]
+        P4["ConfigurationInputProcessor"]
+        P5["BinaryInputProcessor"]
+        P6["ContainerInputProcessor"]
+    end
+
+    subgraph Scanners["Discovery Scanners"]
+        S1["JavaSourceScanner"]
+        S2["MavenDependencyScanner"]
+        S3["CertificateArtifactScanner"]
+        S4["BinaryScanner"]
+        S5["ContainerImageScanner"]
+    end
+
+    subgraph Analysis["Analysis Engines"]
+        E1["InventoryClassifier"]
+        E2["RiskEngine"]
+        E3["QuantumRiskEngine"]
+        E4["PQCRecommendationEngine"]
+        E5["CBOMGenerator"]
+    end
+
+    subgraph Output["Output & Visualization"]
+        O1["AnalysisResponse JSON"]
+        O2["CycloneDX 1.6 CBOM"]
+        O3["React Dashboard"]
+    end
+
+    I1 --> A2
+    I2 --> A1
+    I3 --> A3
+    I4 --> A4
+    I5 --> A5
+    I6 --> A6
+
+    A1 --> P2
+    A2 --> P1
+    A3 --> P3
+    A4 --> P4
+    A5 --> P5
+    A6 --> P6
+
+    P1 --> S1
+    P2 --> S1
+    P3 --> S1
+    P4 --> S1
+    P5 --> S4
+    P6 --> S5
+
+    S1 --> E1
+    S2 --> E1
+    S3 --> E1
+    S4 --> E1
+    S5 --> E1
+
+    E1 --> E2
+    E2 --> E3
+    E3 --> E4
+    E4 --> E5
+
+    E5 --> O1
+    E5 --> O2
+    O1 --> O3
+```
+
 ## Project Structure
 ```
 ECDAT/
 ├── backend/          # Spring Boot backend
-├── frontend/        # React frontend
-├── test-target/     # Target for cryptographic testing
+│   ├── src/main/java/com/ecdat/backend/
+│   │   ├── cbom/                    # CBOM generation
+│   │   ├── controller/              # REST API controllers
+│   │   ├── dto/                     # Data transfer objects
+│   │   ├── input/                   # Input processors & security
+│   │   ├── inventory/               # Asset classification
+│   │   ├── pqc/                     # PQC recommendation engine
+│   │   ├── risk/                    # Risk assessment engine
+│   │   ├── scanner/                 # Discovery scanners
+│   │   └── service/                 # Business logic services
+│   └── src/test/                    # Comprehensive test suite
+├── frontend/        # React + TypeScript + Vite frontend
+│   ├── src/components/              # UI components
+│   ├── src/services/                # API client
+│   ├── src/types/                   # TypeScript types
+│   └── src/test/                    # Frontend tests
+├── test-target/     # Sample Java project for testing
+├── test-fixtures/   # Test data and fixtures
 ├── docs/            # Documentation
 └── README.md
 ```
+
+## Supported Input Types
+
+ECDAT supports multiple input sources for cryptographic analysis:
+
+| Input Type | Supported | API Endpoint | File Formats | Notes |
+|------------|-----------|---------------|---------------|-------|
+| **ZIP Archive** | ✅ Yes | `POST /api/analyze/upload` | .zip | Project archives with source code |
+| **Directory Path** | ✅ Yes | `POST /api/analyze` | Local directory | Requires security configuration |
+| **Repository URL** | ✅ Yes | `POST /api/analyze/repository` | HTTPS Git URLs | Public repositories only, SSRF protected |
+| **Configuration File** | ✅ Yes | `POST /api/analyze/configuration` | .properties, .yml, .yaml, .xml, .conf, .cfg, .ini | 10 MB max file size |
+| **Binary File** | ✅ Yes | `POST /api/analyze/binary` | .jar, .class | Static bytecode analysis, no execution |
+| **Container Image** | ✅ Yes | `POST /api/analyze/container` | .tar, .tar.gz, .tgz | Static Docker/OCI analysis, no daemon required |
+
+## Current Limitations
+
+### Discovery Scope
+- **Software-Centric Discovery**: ECDAT focuses on static analysis of software artifacts (source code, binaries, configurations). It does not perform live infrastructure scanning or runtime cryptographic discovery.
+- **Language Support**: Currently optimized for Java source code analysis. Other languages are not supported.
+- **Static Analysis Boundaries**: Cannot resolve cryptographic algorithms constructed dynamically at runtime (marked as `UNKNOWN` with `LOW` confidence).
+- **Dependency Presence vs Usage**: Library/dependency presence in build files is not treated as proof of cryptographic usage.
+
+### Infrastructure & Cloud
+- **No HSM/KMS Integration**: Does not discover cryptographic assets in Hardware Security Modules or Key Management Services.
+- **No Cloud Service Discovery**: No integration with AWS KMS, Azure Key Vault, GCP KMS, or other cloud cryptographic services.
+- **No Live Runtime Analysis**: Cannot discover cryptographic operations in running applications or network traffic.
+
+### Quantum Risk Assessment
+- **Prototype Methodology**: Risk scores use an ECDAT prototype heuristic (0-100), not official NIST/CVSS scoring formulas.
+- **Threat Horizon Assumptions**: Quantum threat timelines are configurable but not based on real-time threat intelligence.
+- **Mosca's Theorem Implementation**: Quantum risk calculations use a simplified implementation of Mosca's theorem (X+Y > Z) without complex migration modeling.
+
+### Recommendations vs Migration
+- **Advisory Only**: PQC recommendations are advisory suggestions for migration planning. ECDAT does not automatically modify source code, replace certificates, or enforce cryptographic policies.
+- **No Automated Migration**: No code generation, certificate renewal, or automated migration tooling.
+- **Manual Implementation Required**: Organizations must manually implement recommended PQC algorithms based on guidance.
+
+### Security & Access Control
+- **No Authentication**: Basic UI login screen exists but has no backend authentication or authorization implementation.
+- **No Authorization**: No role-based access control or user permissions.
+- **No Audit Logging**: No audit trail for analysis requests or results.
+- **In-Memory Only**: All analysis data is stored in-memory per request with no database persistence.
+
+### Operational Constraints
+- **Synchronous Processing**: API executes analysis synchronously. Large codebases may experience higher latency.
+- **Single-Tenant**: Designed for single-tenant operation without multi-tenancy support.
+- **No Scalability**: No horizontal scaling or distributed processing capabilities.
+
+## Feature Status Summary
+
+### IMPLEMENTED ✅
+- **Core Discovery**: Java AST scanning, Maven dependency scanning, certificate scanning
+- **Binary Analysis**: JAR and CLASS bytecode analysis with constant pool inspection
+- **Container Analysis**: Static Docker/OCI image analysis with layer extraction
+- **Configuration Analysis**: Multi-format configuration file parsing (.properties, .yml, .yaml, .xml, .conf, .cfg, .ini)
+- **Risk Assessment**: Rule-based risk engine with quantum risk classification
+- **PQC Recommendations**: Purpose-aware post-quantum algorithm recommendations
+- **CBOM Generation**: CycloneDX 1.6-aligned cryptographic bill of materials (not schema-compliant)
+- **Multi-Input Architecture**: Extensible input processor system with 6 input types
+- **Repository Scanning**: Secure Git repository cloning with SSRF protection
+- **Inventory Classification**: Enterprise asset categorization and lifecycle management
+- **React Dashboard**: Modern cybersecurity UI with multiple views and filters
+- **REST API**: Comprehensive API with 8 endpoints for all input types
+- **Security Controls**: Zip Slip protection, path traversal validation, resource limits
+- **Test Coverage**: 334 backend tests (1 skipped), 32 frontend tests
+
+### PARTIALLY IMPLEMENTED ⚠️
+- **Authentication**: UI login screen exists but no backend auth implementation
+- **Quantum Risk Engine**: Basic Mosca's theorem implementation without advanced migration modeling
+- **CBOM Schema**: CycloneDX 1.6-inspired structure with custom properties (not schema-compliant)
+
+### PLANNED / FUTURE 📋
+- **Database Persistence**: Store analysis results and historical data
+- **Authentication & Authorization**: Real user authentication with RBAC
+- **HSM/KMS Integration**: Discover cryptographic assets in hardware security modules
+- **Cloud Service Discovery**: AWS KMS, Azure Key Vault, GCP KMS integration
+- **Live Infrastructure Scanning**: Runtime cryptographic discovery
+- **Automated Migration**: Code generation and automated PQC migration tooling
+- **Multi-Language Support**: Extend beyond Java to other programming languages
+- **Real-Time Threat Monitoring**: Dynamic quantum threat horizon updates
+- **Audit Logging**: Comprehensive audit trail for compliance
+- **Multi-Tenancy**: Support for multiple organizations and projects
+- **Distributed Processing**: Horizontal scaling for large codebases
 
 ## Crypto Discovery
 
@@ -216,6 +447,105 @@ The Risk Engine provides explainable, rule-based risk assessment for cryptograph
 *   **Quantum Risk**: NONE, LOW, HIGH
 *   **Risk Factors**: Individual contributions with name, score, and explanation
 *   **Confidence Integration**: LOW confidence findings receive adjusted risk assessments
+*   **Score Breakdown**: Explainable component-by-component score attribution with methodology note
+
+### ECDAT Risk Score Methodology
+
+The ECDAT Risk Score is a **heuristic assessment** (not NIST/CVSS) that combines multiple weighted factors to produce a 0–100 risk score. The scoring is deterministic and fully explainable.
+
+#### Scoring Formula
+
+```
+Total Score = Σ (Algorithm Factors + Key Size Factors + Quantum Factors + Business Context Factors)
+```
+
+The score is capped at 100 and floored at 0.
+
+#### Factor Categories and Weights
+
+**Algorithm Strength Factors:**
+- Public-key cryptography (RSA, ECDSA, ECDH): +5 points
+- Symmetric cryptography (AES): +3 points
+- Modern hash (SHA-256, SHA-512): +10 points
+- Weak hash (SHA-1): +60 points
+- Broken hash (MD5): +85 points
+- Cryptographic concern (algorithm-specific base): +5 to +30 points
+
+**Quantum Vulnerability Factors:**
+- Quantum-vulnerable algorithms (RSA, ECDSA, ECDH): +20 points
+- Quantum-resistant algorithms (AES, SHA-256, SHA-512): +5 points
+
+**Key Size Factors:**
+- RSA < 1024 bits: +40 points
+- RSA 1024-2047 bits: +10 points
+- RSA 2048 bits: 0 points
+- RSA > 2048 bits: -5 points
+- RSA unknown key size: +15 points
+- AES-256: -5 points
+- AES-128: +5 points
+- AES unknown key size: +10 points
+
+**Business Context Factors:**
+- Data sensitivity (HIGHLY_SENSITIVE): +15 points
+- Data sensitivity (CONFIDENTIAL): +10 points
+- Data sensitivity (INTERNAL): +5 points
+- Data sensitivity (PUBLIC): 0 points
+- Business criticality (CRITICAL): +15 points
+- Business criticality (HIGH): +10 points
+- Business criticality (MEDIUM): +5 points
+- Business criticality (LOW): 0 points
+
+**Usage Context Factors:**
+- Digital signature purpose: +2 points
+- Key generation purpose: +2 points
+- Key agreement purpose: +2 points
+
+**Algorithm Status Factors:**
+- Deprecated algorithm (SHA-1, MD5): +10 to +15 points
+
+#### Example Calculation
+
+**RSA-2048 with HIGH business context:**
+```
+PUBLIC_KEY_CRYPTOGRAPHY: +5
+QUANTUM_VULNERABILITY: +20
+CRYPTOGRAPHIC_CONCERN: +25
+KEY_SIZE (2048 bits): 0
+DATA_SENSITIVITY (HIGHLY_SENSITIVE): +15
+BUSINESS_CRITICALITY (CRITICAL): +15
+─────────────────────────────────
+Total: 80 → Risk Level: HIGH
+```
+
+**MD5 with LOW business context:**
+```
+BROKEN_HASH: +85
+DEPRECATED_ALGORITHM: +15
+DATA_SENSITIVITY (PUBLIC): 0
+BUSINESS_CRITICALITY (LOW): 0
+─────────────────────────────────
+Total: 100 → Risk Level: CRITICAL (capped)
+```
+
+**AES-256 with MEDIUM business context:**
+```
+SYMMETRIC_CRYPTOGRAPHY: +3
+CRYPTOGRAPHIC_CONCERN: +5
+KEY_SIZE (AES-256): -5
+QUANTUM_RESISTANCE: +5
+DATA_SENSITIVITY (INTERNAL): +5
+BUSINESS_CRITICALITY (MEDIUM): +5
+─────────────────────────────────
+Total: 18 → Risk Level: LOW
+```
+
+#### Important Notes
+
+*   **Heuristic Methodology**: This is an ECDAT prototype heuristic, not an official NIST or CVSS scoring formula.
+*   **Deterministic**: Same input always produces the same score.
+*   **Explainable**: Every score includes a full breakdown of contributing factors.
+*   **Business Context**: When provided, business criticality and data sensitivity adjust the score by ±15 points.
+*   **Score Capping**: Scores are capped at 100 (CRITICAL) and floored at 0 (LOW).
 
 ### Risk Scoring Rules
 
@@ -355,7 +685,7 @@ The PQC Recommendation Engine is designed to be:
 
 A **Cryptography Bill of Materials (CBOM)** is a structured, machine-readable inventory of all cryptographic assets, algorithms, key sizes, certificates, and protocols present in a software system. It extends the Software Bill of Materials (SBOM) concept to provide visibility into cryptographic posture, enabling organizations to manage quantum risk and plan post-quantum cryptography (PQC) migrations.
 
-ECDAT generates **CycloneDX 1.6-compatible JSON** representing cryptographic assets discovered in scanned source code.
+ECDAT generates **CycloneDX 1.6-inspired JSON** representing cryptographic assets discovered in scanned source code. The documents follow CycloneDX structure for top-level fields and component types but use custom cryptographic properties that are not schema-compliant.
 
 ### Pipeline Integration
 
@@ -366,7 +696,7 @@ The CBOM generation pipeline integrates the entire discovery and analysis workfl
 1. **CryptoFinding**: Static AST analysis discovers cryptographic API usages in source code.
 2. **RiskAssessment**: The Risk Engine evaluates findings to determine risk scores, risk levels, quantum risk, and specific risk factors.
 3. **PQCRecommendation**: The PQC Recommendation Engine generates purpose-aware post-quantum algorithm recommendations and migration priorities.
-4. **CBOMDocument**: The `CBOMGenerator` aggregates risk assessments and matching PQC recommendations into standardized `cryptographic-asset` components within a CycloneDX document.
+4. **CBOMDocument**: The `CBOMGenerator` aggregates risk assessments and matching PQC recommendations into `cryptographic-asset` components within a CycloneDX-inspired document structure.
 
 ### Represented CBOM Information
 
@@ -438,7 +768,7 @@ The CBOM subsystem is implemented in `com.ecdat.backend.cbom`:
 *   **Dependency Presence vs. Usage**: The presence of cryptographic libraries or dependencies in a project does not prove algorithm usage; components are only generated from identified code usages.
 *   **Prototype Risk Scoring**: ECDAT risk scores reflect an experimental prototype methodology, not official NIST scoring formulas or regulatory certifications.
 *   **Advisory Guidance**: PQC recommendations are advisory suggestions to aid migration planning and do not automatically rewrite code, replace certificates, or enforce cryptographic policies.
-*   **Scope of CycloneDX Compatibility**: CycloneDX compatibility is claimed only to the extent actually implemented in the JSON document model (structured `cryptographic-asset` components with custom `cryptoProperties`), rather than full schema certification against external CycloneDX tools.
+*   **CycloneDX 1.6 Schema Compliance**: ECDAT generates JSON documents inspired by CycloneDX 1.6 CBOM specifications but does not fully conform to the official schema. The implementation uses custom `cryptoProperties` that differ from the standard `cryptoPropertiesType` structure. Components use the correct `cryptographic-asset` type but the cryptographic properties follow ECDAT's custom format rather than the standard `algorithmProperties`, `certificateProperties`, or `protocolProperties` structures. The generated JSON is valid JSON but would not pass formal CycloneDX schema validation.
 
 ## Phase 5 — Backend API / Pipeline Integration
 
@@ -705,7 +1035,7 @@ VITE_API_BASE_URL=http://localhost:8080
 * **Static File Scope**: Directory path scanning requires paths accessible to the backend filesystem environment.
 * **Browser Sandbox**: Archive uploads are bounded by browser memory limits and backend multipart file upload constraints.
 
-## Phase 7 — Crypto Inventory Expansion & Asset Classification
+## Enterprise Inventory & Asset Classification
 
 ### Overview
 
@@ -794,6 +1124,51 @@ Inventory metadata is seamlessly embedded in:
 The inventory subsystem is backed by 20 dedicated unit and integration tests including negative test suites:
 - **Total Backend Tests**: 104 tests (100% passing)
 - **Frontend Tests**: 16 tests (100% passing)
+
+---
+
+## Authentication & Session Architecture (Developer-Facing Limitations)
+
+### Current Authentication Model: Prototype / Demo Workspace
+ECDAT currently provides a client-side **Prototype Authentication / Demo Workspace Session** designed for rapid local evaluations and the Smart India Hackathon (SIH) demonstration:
+
+1. **Client-Side Session State**:
+   - Authentication state (`ecdat_auth`) and user metadata (`ecdat_user`) are stored exclusively in the browser's `localStorage`.
+   - The login form accepts any username and demo passphrase without network transmission or cryptographic credential verification.
+   - User names are dynamically formatted from the entered email address for customizable analyst workspaces.
+
+2. **Backend API Security Stance**:
+   - The Spring Boot backend REST endpoints (`/api/analyze`, `/api/analyze/upload`, `/health`, etc.) operate in a stateless, unauthenticated analysis mode for local command/UI invocation.
+   - Backend security focuses on **input isolation, sandbox containment, and resource protection** rather than identity verification:
+     * Zip Slip path traversal mitigation and canonical path validation.
+     * Sandboxed per-analysis temporary directories with guaranteed cleanup.
+     * Upload and decompression zip bomb limits (max entries: 10,000, max uncompressed limit: 200 MB).
+     * Repository scanning execution bounds (max clone duration: 60s, max disk size: 150 MB, network and command timeout guards).
+     * Container image layer traversal limits and format canonicalization.
+     * Global structured exception handling with zero stack trace exposure.
+   - **No API controls have been weakened**; the API simply does not enforce user authentication at this stage.
+
+3. **Zero Secrets Stored**:
+   - No default passwords, tokens, API keys, or private secrets are hardcoded in the codebase, frontend bundles, or configuration files.
+
+### Requirements for Production Deployment
+To transition ECDAT from a prototype demo workspace to an enterprise multi-tenant production environment, the following architecture must be implemented:
+
+1. **Identity & Access Management (IAM) Integration**:
+   - Integrate with an enterprise OpenID Connect (OIDC) / OAuth 2.0 Identity Provider (e.g., Keycloak, Okta, Microsoft Entra ID) using PKCE flow.
+   - Alternatively, implement Spring Security with JWT bearer token verification on all `/api/**` routes.
+
+2. **Role-Based Access Control (RBAC)**:
+   - Define and enforce granular role-based permissions (e.g., `ROLE_SECURITY_ANALYST`, `ROLE_CRYPTO_OFFICER`, `ROLE_AUDITOR`, `ROLE_ADMIN`).
+   - Restrict project scanning, configuration adjustment, and CBOM export according to user roles.
+
+3. **Secure Session & Token Storage**:
+   - Discontinue raw `localStorage` session persistence.
+   - Store session tokens in `HttpOnly`, `Secure`, `SameSite=Strict` cookies or transient memory with refresh-token rotation to eliminate XSS token theft vectors.
+
+4. **Auditing & Rate Limiting**:
+   - Add persistent audit logging for scan requests, CBOM exports, and user sign-in events.
+   - Implement IP and user-based API rate limiting / throttling on scan submission endpoints to prevent resource exhaustion.
 
 
 

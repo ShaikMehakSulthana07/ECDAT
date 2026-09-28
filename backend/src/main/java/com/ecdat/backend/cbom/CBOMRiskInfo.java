@@ -12,7 +12,8 @@ public class CBOMRiskInfo {
     private List<String> riskFactors;
     
     // Quantum migration risk details (Mosca-style assessment)
-    private Boolean quantumVulnerable;
+    private String quantumVulnerabilityStatus; // VULNERABLE, NOT_QUANTUM_VULNERABLE, UNKNOWN
+    private Boolean quantumVulnerable; // Legacy boolean for backward compatibility
     private Boolean migrationRequired;
     private Integer dataLifetimeYears;
     private Integer migrationTimeYears;
@@ -22,6 +23,13 @@ public class CBOMRiskInfo {
     private String migrationUrgency;
     private String quantumRiskExplanation;
     private String moscaCalculationDetails;
+    
+    // Value source attribution
+    private String dataLifetimeYearsSource;
+    private String migrationTimeYearsSource;
+    private String threatHorizonYearsSource;
+    private String businessCriticalitySource;
+    private String dataSensitivitySource;
 
     // Default constructor for Jackson deserialization
     public CBOMRiskInfo() {
@@ -69,6 +77,9 @@ public class CBOMRiskInfo {
     }
 
     // Getters and setters for quantum migration risk details
+    public String getQuantumVulnerabilityStatus() { return quantumVulnerabilityStatus; }
+    public void setQuantumVulnerabilityStatus(String quantumVulnerabilityStatus) { this.quantumVulnerabilityStatus = quantumVulnerabilityStatus; }
+
     public Boolean getQuantumVulnerable() { return quantumVulnerable; }
     public void setQuantumVulnerable(Boolean quantumVulnerable) { this.quantumVulnerable = quantumVulnerable; }
 
@@ -98,4 +109,20 @@ public class CBOMRiskInfo {
 
     public String getMoscaCalculationDetails() { return moscaCalculationDetails; }
     public void setMoscaCalculationDetails(String moscaCalculationDetails) { this.moscaCalculationDetails = moscaCalculationDetails; }
+
+    // Value source getters and setters
+    public String getDataLifetimeYearsSource() { return dataLifetimeYearsSource; }
+    public void setDataLifetimeYearsSource(String dataLifetimeYearsSource) { this.dataLifetimeYearsSource = dataLifetimeYearsSource; }
+
+    public String getMigrationTimeYearsSource() { return migrationTimeYearsSource; }
+    public void setMigrationTimeYearsSource(String migrationTimeYearsSource) { this.migrationTimeYearsSource = migrationTimeYearsSource; }
+
+    public String getThreatHorizonYearsSource() { return threatHorizonYearsSource; }
+    public void setThreatHorizonYearsSource(String threatHorizonYearsSource) { this.threatHorizonYearsSource = threatHorizonYearsSource; }
+
+    public String getBusinessCriticalitySource() { return businessCriticalitySource; }
+    public void setBusinessCriticalitySource(String businessCriticalitySource) { this.businessCriticalitySource = businessCriticalitySource; }
+
+    public String getDataSensitivitySource() { return dataSensitivitySource; }
+    public void setDataSensitivitySource(String dataSensitivitySource) { this.dataSensitivitySource = dataSensitivitySource; }
 }

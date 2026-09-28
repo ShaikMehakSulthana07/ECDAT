@@ -70,6 +70,12 @@ function App() {
   const [activeTarget, setActiveTarget] = useState<string>('');
   const [error, setError] = useState<{ message: string; errorType?: string; status?: number } | null>(null);
   const [selectedFindingIndex, setSelectedFindingIndex] = useState<number | null>(null);
+  const [drawerInitialTab, setDrawerInitialTab] = useState<'overview' | 'mosca' | 'pqc' | 'evidence' | 'why_risky'>('overview');
+
+  const handleOpenFinding = (index: number, tab: 'overview' | 'mosca' | 'pqc' | 'evidence' | 'why_risky' = 'overview') => {
+    setSelectedFindingIndex(index);
+    setDrawerInitialTab(tab);
+  };
 
   // Health check on mount
   const checkHealth = async () => {
@@ -379,7 +385,7 @@ function App() {
             <DashboardView
               analysisData={analysisData}
               onNavigate={(page) => setActivePage(page)}
-              onSelectFinding={(idx) => setSelectedFindingIndex(idx)}
+              onSelectFinding={(idx, tab) => handleOpenFinding(idx, tab)}
               onQuickScan={handleQuickScan}
               isLoading={isLoading}
             />
@@ -403,7 +409,7 @@ function App() {
               findings={analysisData?.findings || []}
               riskAssessments={analysisData?.riskAssessments || []}
               pqcRecommendations={analysisData?.pqcRecommendations || []}
-              onSelectFinding={(idx) => setSelectedFindingIndex(idx)}
+              onSelectFinding={(idx, tab) => handleOpenFinding(idx, tab)}
               selectedIndex={selectedFindingIndex}
               searchQuery={searchQuery}
             />
@@ -427,7 +433,7 @@ function App() {
               findings={analysisData?.findings || []}
               riskAssessments={analysisData?.riskAssessments || []}
               context={analysisData?.context}
-              onSelectFinding={(idx) => setSelectedFindingIndex(idx)}
+              onSelectFinding={(idx, tab) => handleOpenFinding(idx, tab)}
             />
           )}
 
@@ -436,7 +442,7 @@ function App() {
               findings={analysisData?.findings || []}
               riskAssessments={analysisData?.riskAssessments || []}
               pqcRecommendations={analysisData?.pqcRecommendations || []}
-              onSelectFinding={(idx) => setSelectedFindingIndex(idx)}
+              onSelectFinding={(idx, tab) => handleOpenFinding(idx, tab)}
             />
           )}
 
@@ -483,6 +489,7 @@ function App() {
           pqcRecommendation={analysisData.pqcRecommendations[selectedFindingIndex]}
           findingIndex={selectedFindingIndex}
           totalFindings={analysisData.findings.length}
+          initialTab={drawerInitialTab}
           onClose={() => setSelectedFindingIndex(null)}
           onNavigatePrev={
             selectedFindingIndex > 0

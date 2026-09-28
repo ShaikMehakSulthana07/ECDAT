@@ -5,7 +5,7 @@ interface PQCMigrationViewProps {
   findings: CryptoFinding[];
   riskAssessments?: RiskAssessment[];
   pqcRecommendations: PQCRecommendation[];
-  onSelectFinding: (index: number) => void;
+  onSelectFinding: (index: number, tab?: 'overview' | 'mosca' | 'pqc' | 'evidence' | 'why_risky') => void;
 }
 
 // Helper to convert ALL_CAPS_SNAKE to readable Title Case
@@ -266,15 +266,28 @@ export const PQCMigrationView: React.FC<PQCMigrationViewProps> = ({
                       </span>
                     </td>
                     <td style={{ textAlign: 'right' }}>
-                      <button
-                        className="btn-secondary btn-sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onSelectFinding(idx);
-                        }}
-                      >
-                        Inspect
-                      </button>
+                      <div style={{ display: 'inline-flex', gap: '6px', alignItems: 'center' }}>
+                        <button
+                          className="btn-secondary btn-sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onSelectFinding(idx, 'why_risky');
+                          }}
+                          title="Why is this risky? View 8-step evidence chain"
+                          style={{ borderColor: 'var(--primary-border)', color: 'var(--accent-purple)' }}
+                        >
+                          Why Risky?
+                        </button>
+                        <button
+                          className="btn-secondary btn-sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onSelectFinding(idx);
+                          }}
+                        >
+                          Inspect
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );

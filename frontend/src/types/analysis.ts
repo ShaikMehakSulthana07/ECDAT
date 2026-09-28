@@ -55,6 +55,16 @@ export type BusinessCriticality =
 
 export type DataSensitivity = 'HIGHLY_SENSITIVE' | 'CONFIDENTIAL' | 'INTERNAL' | 'PUBLIC' | 'UNKNOWN';
 
+export type ValueSource = 'USER_PROVIDED' | 'ORGANIZATION_DEFAULT' | 'SYSTEM_DEFAULT' | 'UNKNOWN';
+
+export type Provenance =
+  | 'OBSERVED'
+  | 'INFERRED'
+  | 'DEPENDENCY_METADATA'
+  | 'USER_PROVIDED'
+  | 'DEFAULT_ASSUMPTION'
+  | 'UNKNOWN';
+
 export interface CryptoFinding {
   algorithm: string;
   variant?: string | null;
@@ -75,6 +85,13 @@ export interface CryptoFinding {
   dataSensitivity?: DataSensitivity;
   protocol?: string | null;
   library?: string | null;
+  // Provenance fields for key attributes
+  algorithmProvenance?: Provenance;
+  keySizeProvenance?: Provenance;
+  purposeProvenance?: Provenance;
+  libraryProvenance?: Provenance;
+  businessCriticalityProvenance?: Provenance;
+  dataSensitivityProvenance?: Provenance;
 }
 
 export interface CryptoAsset {
@@ -126,6 +143,21 @@ export interface RiskAssessment {
   confidence: Confidence;
   originalFinding: CryptoFinding;
   quantumRiskResult?: QuantumRiskResult;
+  scoreBreakdown?: RiskScoreBreakdown;
+}
+
+export interface RiskScoreBreakdown {
+  totalScore: number;
+  riskLevel: RiskLevel;
+  components: ScoreComponent[];
+  methodologyNote: string;
+}
+
+export interface ScoreComponent {
+  name: string;
+  score: number;
+  explanation: string;
+  category: string;
 }
 
 export interface PQCRecommendation {
@@ -140,6 +172,10 @@ export interface PQCRecommendation {
   quantumRisk: QuantumRisk;
   confidence: Confidence;
   considerations: string[];
+  // Provenance fields for recommendation attributes
+  recommendationStatusProvenance?: Provenance;
+  recommendedAlgorithmProvenance?: Provenance;
+  migrationPriorityProvenance?: Provenance;
 }
 
 export interface CBOMProperty {
@@ -163,6 +199,12 @@ export interface CBOMRiskInfo {
   migrationUrgency?: string;
   quantumRiskExplanation?: string;
   moscaCalculationDetails?: string;
+  // Value source attribution
+  dataLifetimeYearsSource?: ValueSource;
+  migrationTimeYearsSource?: ValueSource;
+  threatHorizonYearsSource?: ValueSource;
+  businessCriticalitySource?: ValueSource;
+  dataSensitivitySource?: ValueSource;
 }
 
 export interface CBOMPQCInfo {
@@ -195,6 +237,12 @@ export interface CBOMCryptoProperties {
   lifecycleStatus?: string;
   businessCriticality?: string;
   dataSensitivity?: string;
+  // Provenance fields for key attributes
+  algorithmProvenance?: Provenance;
+  keySizeProvenance?: Provenance;
+  purposeProvenance?: Provenance;
+  businessCriticalityProvenance?: Provenance;
+  dataSensitivityProvenance?: Provenance;
 }
 
 export interface CBOMComponent {
@@ -282,6 +330,12 @@ export interface ProjectAnalysisContext {
   dataLifetimeYears?: number;
   migrationTimeYears?: number;
   threatHorizonYears?: number;
+  // Value source attribution
+  businessCriticalitySource?: ValueSource;
+  dataSensitivitySource?: ValueSource;
+  dataLifetimeYearsSource?: ValueSource;
+  migrationTimeYearsSource?: ValueSource;
+  threatHorizonYearsSource?: ValueSource;
 }
 
 // Alias for frontend usage
@@ -302,6 +356,7 @@ export type MigrationUrgency = 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW' | 'NONE' |
 
 export interface QuantumRiskResult {
   algorithm: string;
+  quantumVulnerabilityStatus?: 'VULNERABLE' | 'NOT_QUANTUM_VULNERABLE' | 'UNKNOWN';
   quantumVulnerable: boolean;
   migrationRequired: boolean;
   migrationTimeYears: number;
@@ -315,6 +370,12 @@ export interface QuantumRiskResult {
   migrationUrgency: MigrationUrgency;
   explanation: string;
   calculationDetails: string;
+  // Value source attribution
+  migrationTimeYearsSource?: ValueSource;
+  dataLifetimeYearsSource?: ValueSource;
+  threatHorizonYearsSource?: ValueSource;
+  businessCriticalitySource?: ValueSource;
+  dataSensitivitySource?: ValueSource;
 }
 
 export interface ErrorResponse {

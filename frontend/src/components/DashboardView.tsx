@@ -4,7 +4,7 @@ import type { AnalysisResponse } from '../types/analysis';
 interface DashboardViewProps {
   analysisData: AnalysisResponse | null;
   onNavigate: (page: 'scan' | 'inventory' | 'certificates' | 'dependencies' | 'quantum' | 'pqc' | 'cbom' | 'reports') => void;
-  onSelectFinding: (index: number) => void;
+  onSelectFinding: (index: number, tab?: 'overview' | 'mosca' | 'pqc' | 'evidence' | 'why_risky') => void;
   onQuickScan: () => void;
   isLoading: boolean;
 }
@@ -834,15 +834,28 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                           </div>
                         </td>
                         <td style={{ textAlign: 'right' }}>
-                          <button
-                            className="btn-secondary btn-sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onSelectFinding(index);
-                            }}
-                          >
-                            View
-                          </button>
+                          <div style={{ display: 'inline-flex', gap: '6px', alignItems: 'center' }}>
+                            <button
+                              className="btn-secondary btn-sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onSelectFinding(index, 'why_risky');
+                              }}
+                              title="Why is this risky? View 8-step evidence chain"
+                              style={{ borderColor: 'var(--primary-border)', color: 'var(--accent-purple)' }}
+                            >
+                              Why Risky?
+                            </button>
+                            <button
+                              className="btn-secondary btn-sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onSelectFinding(index);
+                              }}
+                            >
+                              View
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     );
@@ -928,7 +941,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             </div>
             <div className="qa-text">
               <span className="qa-title">View CBOM</span>
-              <span className="qa-sub">CycloneDX export &amp; spec</span>
+              <span className="qa-sub">CycloneDX-inspired export &amp; custom spec</span>
             </div>
           </button>
         </div>

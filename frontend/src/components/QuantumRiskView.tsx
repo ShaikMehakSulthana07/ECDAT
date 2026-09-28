@@ -5,7 +5,7 @@ interface QuantumRiskViewProps {
   findings: CryptoFinding[];
   riskAssessments: RiskAssessment[];
   context?: ProjectAnalysisContext;
-  onSelectFinding: (index: number) => void;
+  onSelectFinding: (index: number, tab?: 'overview' | 'mosca' | 'pqc' | 'evidence' | 'why_risky') => void;
 }
 
 // Helper to convert ALL_CAPS_SNAKE to readable Title Case
@@ -31,14 +31,43 @@ export const QuantumRiskView: React.FC<QuantumRiskViewProps> = ({
   const threatHorizon = context?.threatHorizonYears ?? 10;
   const totalExposure = migrationTime + dataLifetime;
   const moscaConditionMet = totalExposure > threatHorizon;
+  
+  // Value source helpers
+  const migrationTimeSource = context?.migrationTimeYearsSource ?? 'SYSTEM_DEFAULT';
+  const dataLifetimeSource = context?.dataLifetimeYearsSource ?? 'SYSTEM_DEFAULT';
+  const threatHorizonSource = context?.threatHorizonYearsSource ?? 'SYSTEM_DEFAULT';
+  
+  const formatSourceLabel = (source: string) => {
+    switch (source) {
+      case 'USER_PROVIDED': return 'User-provided';
+      case 'ORGANIZATION_DEFAULT': return 'Organization default';
+      case 'SYSTEM_DEFAULT': return 'Illustrative default';
+      case 'UNKNOWN': return 'Unknown';
+      default: return source;
+    }
+  };
 
   // Quantum aggregations
   const quantumVulnerableFindings = findings
     .map((finding, idx) => ({ finding, risk: riskAssessments[idx], idx }))
-    .filter((item) => item.risk?.quantumRisk === 'HIGH' || item.risk?.quantumRiskResult?.quantumVulnerable);
+    .filter((item) => {
+      const vulnStatus = item.risk?.quantumRiskResult?.quantumVulnerabilityStatus;
+      const legacyVuln = item.risk?.quantumRiskResult?.quantumVulnerable;
+      const highQuantumRisk = item.risk?.quantumRisk === 'HIGH';
+      // Consider vulnerable if status is VULNERABLE or legacy boolean is true
+      return vulnStatus === 'VULNERABLE' || legacyVuln === true || highQuantumRisk;
+    });
+
+  const unknownQuantumFindings = findings
+    .map((finding, idx) => ({ finding, risk: riskAssessments[idx], idx }))
+    .filter((item) => {
+      const vulnStatus = item.risk?.quantumRiskResult?.quantumVulnerabilityStatus;
+      return vulnStatus === 'UNKNOWN';
+    });
 
   const totalAssets = findings.length || 1;
   const vulnCount = quantumVulnerableFindings.length;
+  const unknownCount = unknownQuantumFindings.length;
   const vulnPct = Math.round((vulnCount / totalAssets) * 100);
 
   // SVG Gauge calculation
@@ -121,10 +150,16 @@ export const QuantumRiskView: React.FC<QuantumRiskViewProps> = ({
             <div className="mosca-metric-box">
               <span className="m-label">Migration Time (X)</span>
               <span className="m-val">{migrationTime} yrs</span>
+              <span className="m-source" style={{ fontSize: '10px', color: 'var(--text-muted)' }}>
+                {formatSourceLabel(migrationTimeSource)}
+              </span>
             </div>
             <div className="mosca-metric-box">
               <span className="m-label">Data Lifetime (Y)</span>
               <span className="m-val">{dataLifetime} yrs</span>
+              <span className="m-source" style={{ fontSize: '10px', color: 'var(--text-muted)' }}>
+                {formatSourceLabel(dataLifetimeSource)}
+              </span>
             </div>
             <div className="mosca-metric-box highlight">
               <span className="m-label">Total Exposure (X+Y)</span>
@@ -133,6 +168,9 @@ export const QuantumRiskView: React.FC<QuantumRiskViewProps> = ({
             <div className="mosca-metric-box">
               <span className="m-label">Threat Horizon (Z)</span>
               <span className="m-val">{threatHorizon} yrs</span>
+              <span className="m-source" style={{ fontSize: '10px', color: 'var(--text-muted)' }}>
+                {formatSourceLabel(threatHorizonSource)}
+              </span>
             </div>
           </div>
 
@@ -225,8 +263,20 @@ export const QuantumRiskView: React.FC<QuantumRiskViewProps> = ({
                   Symmetric and hash primitives requiring key size evaluation
                 </p>
               </div>
-              <span className="risk-badge low">{Math.max(0, findings.length - vulnCount)} Assets</span>
+              <span className="risk-badge low">{Math.max(0, findings.length - vulnCount - unknownCount)} Assets</span>
             </div>
+
+            {unknownCount > 0 && (
+              <div style={{ padding: '14px', background: 'var(--bg-surface-subtle)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-warning)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <strong style={{ fontSize: '13.5px', color: 'var(--text-primary)' }}>Unknown Classification</strong>
+                  <p style={{ fontSize: '11.5px', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                    Algorithms without quantum vulnerability classification - manual review required
+                  </p>
+                </div>
+                <span className="risk-badge" style={{ background: 'var(--warning-bg)', color: 'var(--warning-text)' }}>{unknownCount} Assets</span>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -302,15 +352,28 @@ export const QuantumRiskView: React.FC<QuantumRiskViewProps> = ({
                         </div>
                       </td>
                       <td style={{ textAlign: 'right' }}>
-                        <button
-                          className="btn-secondary btn-sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onSelectFinding(idx);
-                          }}
-                        >
-                          Inspect
-                        </button>
+                        <div style={{ display: 'inline-flex', gap: '6px', alignItems: 'center' }}>
+                          <button
+                            className="btn-secondary btn-sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onSelectFinding(idx, 'why_risky');
+                            }}
+                            title="Why is this risky? View 8-step evidence chain"
+                            style={{ borderColor: 'var(--primary-border)', color: 'var(--accent-purple)' }}
+                          >
+                            Why Risky?
+                          </button>
+                          <button
+                            className="btn-secondary btn-sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onSelectFinding(idx);
+                            }}
+                          >
+                            Inspect
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );

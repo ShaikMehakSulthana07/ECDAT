@@ -6,7 +6,7 @@ interface LoginScreenProps {
 
 export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
   const [email, setEmail] = useState('analyst@ecdat.local');
-  const [password, setPassword] = useState('••••••••••••');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -50,16 +50,21 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
       <div className="auth-form-panel">
         <div className="auth-form-card">
           <div className="auth-card-header">
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
+              <span className="prototype-auth-badge">
+                Prototype Authentication · Demo Workspace
+              </span>
+            </div>
             <h2 className="auth-card-title">Welcome to CRYPTAGUARD</h2>
             <p className="auth-card-subtitle">
-              Sign in to access your security analysis workspace
+              Interactive demonstration workspace session for cryptographic evaluation
             </p>
           </div>
 
           <form onSubmit={handleSubmit} className="auth-form">
             <div className="form-group">
               <label className="form-label" htmlFor="email-address">
-                Email Address
+                Email Address / Analyst Handle
               </label>
               <input
                 id="email-address"
@@ -73,18 +78,22 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
             </div>
 
             <div className="form-group">
-              <label className="form-label" htmlFor="password-field">
-                Password
-              </label>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <label className="form-label" htmlFor="password-field">
+                  Session Passphrase (Demo Only)
+                </label>
+                <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>
+                  Any value accepted (non-validating)
+                </span>
+              </div>
               <div className="password-input-wrap">
                 <input
                   id="password-field"
                   type={showPassword ? 'text' : 'password'}
                   className="form-input"
-                  placeholder="Enter your password"
+                  placeholder="Enter any demo passphrase"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  required
                 />
                 <button
                   type="button"
@@ -109,7 +118,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
             </div>
 
             <button type="submit" className="btn-auth-primary">
-              Sign In
+              Enter Demo Workspace
             </button>
           </form>
 
@@ -120,7 +129,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
                 <line x1="12" y1="16" x2="12" y2="12" />
                 <line x1="12" y1="8" x2="12.01" y2="8" />
               </svg>
-              For demonstration purposes only · Local analysis session
+              Prototype Session · Client-side demonstration only · No credentials transmitted or validated
             </span>
           </div>
         </div>

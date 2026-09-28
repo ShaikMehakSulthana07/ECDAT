@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import type { CryptoFinding, RiskAssessment, PQCRecommendation } from '../types/analysis';
+import RiskExplanation from './RiskExplanation';
 
 interface AssetDetailDrawerProps {
   finding: CryptoFinding;
@@ -10,6 +11,7 @@ interface AssetDetailDrawerProps {
   onClose: () => void;
   onNavigatePrev?: () => void;
   onNavigateNext?: () => void;
+  initialTab?: 'overview' | 'mosca' | 'pqc' | 'evidence' | 'why_risky';
 }
 
 export const AssetDetailDrawer: React.FC<AssetDetailDrawerProps> = ({
@@ -21,8 +23,15 @@ export const AssetDetailDrawer: React.FC<AssetDetailDrawerProps> = ({
   onClose,
   onNavigatePrev,
   onNavigateNext,
+  initialTab = 'overview',
 }) => {
-  const [activeTab, setActiveTab] = useState<'overview' | 'mosca' | 'pqc' | 'evidence'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'mosca' | 'pqc' | 'evidence' | 'why_risky'>(initialTab);
+
+  useEffect(() => {
+    if (initialTab) {
+      setActiveTab(initialTab);
+    }
+  }, [initialTab, findingIndex]);
 
   const riskLevel = riskAssessment?.riskLevel || 'LOW';
   const isQuantumVuln = riskAssessment?.quantumRisk === 'HIGH' || riskAssessment?.quantumRiskResult?.quantumVulnerable;
@@ -174,6 +183,12 @@ export const AssetDetailDrawer: React.FC<AssetDetailDrawerProps> = ({
               onClick={() => setActiveTab('evidence')}
             >
               Evidence
+            </button>
+            <button
+              className={`asset-tab-btn ${activeTab === 'why_risky' ? 'active' : ''}`}
+              onClick={() => setActiveTab('why_risky')}
+            >
+              Why is this risky?
             </button>
           </div>
 
@@ -402,6 +417,17 @@ export const AssetDetailDrawer: React.FC<AssetDetailDrawerProps> = ({
                   <code>{finding.evidence}</code>
                 </pre>
               </div>
+            </div>
+          )}
+
+          {/* TAB 5: WHY IS THIS RISKY? */}
+          {activeTab === 'why_risky' && (
+            <div className="tab-content-pane">
+              <RiskExplanation
+                finding={finding}
+                riskAssessment={riskAssessment}
+                pqcRecommendation={pqcRecommendation}
+              />
             </div>
           )}
         </div>

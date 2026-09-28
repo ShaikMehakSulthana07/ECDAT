@@ -160,9 +160,76 @@ class QuantumRiskEngineTest {
 
         QuantumRiskResult result = engine.assessQuantumRisk(input);
 
+        assertEquals(com.ecdat.backend.risk.quantum.QuantumVulnerabilityStatus.UNKNOWN, result.getQuantumVulnerabilityStatus());
+        assertFalse(result.isQuantumVulnerable());
+        assertFalse(result.isMigrationRequired());
+        assertEquals(MigrationUrgency.UNKNOWN, result.getMigrationUrgency());
+        assertTrue(result.getExplanation().contains("cannot be determined"));
+        assertTrue(result.getExplanation().contains("ECDAT does not have a classification rule"));
+    }
+
+    @Test
+    void testKnownVulnerableAlgorithm_RSA() {
+        QuantumRiskInput input = new QuantumRiskInput();
+        input.setAlgorithm("RSA");
+        input.setMigrationTimeYears(3);
+        input.setDataLifetimeYears(12);
+        input.setThreatHorizonYears(10);
+
+        QuantumRiskResult result = engine.assessQuantumRisk(input);
+
+        assertEquals(com.ecdat.backend.risk.quantum.QuantumVulnerabilityStatus.VULNERABLE, result.getQuantumVulnerabilityStatus());
+        assertTrue(result.isQuantumVulnerable());
+        assertTrue(result.isMigrationRequired());
+        assertTrue(result.isMoscaConditionMet());
+    }
+
+    @Test
+    void testKnownSafeAlgorithm_AES() {
+        QuantumRiskInput input = new QuantumRiskInput();
+        input.setAlgorithm("AES");
+        input.setMigrationTimeYears(5);
+        input.setDataLifetimeYears(20);
+        input.setThreatHorizonYears(10);
+
+        QuantumRiskResult result = engine.assessQuantumRisk(input);
+
+        assertEquals(com.ecdat.backend.risk.quantum.QuantumVulnerabilityStatus.NOT_QUANTUM_VULNERABLE, result.getQuantumVulnerabilityStatus());
         assertFalse(result.isQuantumVulnerable());
         assertFalse(result.isMigrationRequired());
         assertEquals(MigrationUrgency.NONE, result.getMigrationUrgency());
+    }
+
+    @Test
+    void testPostQuantumAlgorithm_MLDSA() {
+        QuantumRiskInput input = new QuantumRiskInput();
+        input.setAlgorithm("ML-DSA");
+        input.setMigrationTimeYears(5);
+        input.setDataLifetimeYears(20);
+        input.setThreatHorizonYears(10);
+
+        QuantumRiskResult result = engine.assessQuantumRisk(input);
+
+        assertEquals(com.ecdat.backend.risk.quantum.QuantumVulnerabilityStatus.NOT_QUANTUM_VULNERABLE, result.getQuantumVulnerabilityStatus());
+        assertFalse(result.isQuantumVulnerable());
+        assertFalse(result.isMigrationRequired());
+        assertEquals(MigrationUrgency.NONE, result.getMigrationUrgency());
+    }
+
+    @Test
+    void testNullAlgorithm_UnknownStatus() {
+        QuantumRiskInput input = new QuantumRiskInput();
+        input.setAlgorithm(null);
+        input.setMigrationTimeYears(5);
+        input.setDataLifetimeYears(10);
+        input.setThreatHorizonYears(8);
+
+        QuantumRiskResult result = engine.assessQuantumRisk(input);
+
+        assertEquals(com.ecdat.backend.risk.quantum.QuantumVulnerabilityStatus.UNKNOWN, result.getQuantumVulnerabilityStatus());
+        assertFalse(result.isQuantumVulnerable());
+        assertFalse(result.isMigrationRequired());
+        assertEquals(MigrationUrgency.UNKNOWN, result.getMigrationUrgency());
     }
 
     @Test
@@ -184,5 +251,94 @@ class QuantumRiskEngineTest {
         assertFalse(result.isMigrationRequired());
         assertEquals(10, result.getTotalExposureYears()); // 5 + 5
         assertEquals(10, result.getThreatHorizonYears());
+    }
+
+    @Test
+    void testValueSource_UserProvided() {
+        QuantumRiskInput input = new QuantumRiskInput();
+        input.setAlgorithm("RSA");
+        input.setMigrationTimeYears(5);
+        input.setDataLifetimeYears(10);
+        input.setThreatHorizonYears(15);
+        input.setBusinessCriticality(BusinessCriticality.HIGH);
+        input.setDataSensitivity(DataSensitivity.HIGHLY_SENSITIVE);
+        
+        // When values are set via setters, they should be marked as USER_PROVIDED
+        assertEquals(com.ecdat.backend.dto.ValueSource.USER_PROVIDED, input.getMigrationTimeYearsSource());
+        assertEquals(com.ecdat.backend.dto.ValueSource.USER_PROVIDED, input.getDataLifetimeYearsSource());
+        assertEquals(com.ecdat.backend.dto.ValueSource.USER_PROVIDED, input.getThreatHorizonYearsSource());
+        assertEquals(com.ecdat.backend.dto.ValueSource.USER_PROVIDED, input.getBusinessCriticalitySource());
+        assertEquals(com.ecdat.backend.dto.ValueSource.USER_PROVIDED, input.getDataSensitivitySource());
+        
+        QuantumRiskResult result = engine.assessQuantumRisk(input);
+        
+        // Result should preserve value sources
+        assertEquals(com.ecdat.backend.dto.ValueSource.USER_PROVIDED, result.getMigrationTimeYearsSource());
+        assertEquals(com.ecdat.backend.dto.ValueSource.USER_PROVIDED, result.getDataLifetimeYearsSource());
+        assertEquals(com.ecdat.backend.dto.ValueSource.USER_PROVIDED, result.getThreatHorizonYearsSource());
+    }
+
+    @Test
+    void testValueSource_SystemDefault() {
+        // When using default constructor, values should be marked as SYSTEM_DEFAULT
+        QuantumRiskInput input = new QuantumRiskInput();
+        
+        assertEquals(com.ecdat.backend.dto.ValueSource.SYSTEM_DEFAULT, input.getMigrationTimeYearsSource());
+        assertEquals(com.ecdat.backend.dto.ValueSource.SYSTEM_DEFAULT, input.getDataLifetimeYearsSource());
+        assertEquals(com.ecdat.backend.dto.ValueSource.SYSTEM_DEFAULT, input.getThreatHorizonYearsSource());
+        assertEquals(com.ecdat.backend.dto.ValueSource.UNKNOWN, input.getBusinessCriticalitySource());
+        assertEquals(com.ecdat.backend.dto.ValueSource.UNKNOWN, input.getDataSensitivitySource());
+        
+        QuantumRiskResult result = engine.assessQuantumRisk(input);
+        
+        assertEquals(com.ecdat.backend.dto.ValueSource.SYSTEM_DEFAULT, result.getMigrationTimeYearsSource());
+        assertEquals(com.ecdat.backend.dto.ValueSource.SYSTEM_DEFAULT, result.getDataLifetimeYearsSource());
+        assertEquals(com.ecdat.backend.dto.ValueSource.SYSTEM_DEFAULT, result.getThreatHorizonYearsSource());
+    }
+
+    @Test
+    void testMoscaCondition_XPlusY_GreaterThan_Z() {
+        QuantumRiskInput input = new QuantumRiskInput();
+        input.setAlgorithm("RSA");
+        input.setMigrationTimeYears(5);
+        input.setDataLifetimeYears(10);
+        input.setThreatHorizonYears(10);
+        
+        QuantumRiskResult result = engine.assessQuantumRisk(input);
+        
+        assertTrue(result.isMoscaConditionMet());
+        assertTrue(result.isMigrationRequired());
+        assertEquals(15, result.getTotalExposureYears());
+    }
+
+    @Test
+    void testMoscaCondition_XPlusY_LessThan_Z() {
+        QuantumRiskInput input = new QuantumRiskInput();
+        input.setAlgorithm("RSA");
+        input.setMigrationTimeYears(2);
+        input.setDataLifetimeYears(3);
+        input.setThreatHorizonYears(10);
+        
+        QuantumRiskResult result = engine.assessQuantumRisk(input);
+        
+        assertFalse(result.isMoscaConditionMet());
+        assertFalse(result.isMigrationRequired());
+        assertEquals(5, result.getTotalExposureYears());
+    }
+
+    @Test
+    void testMoscaCondition_XPlusY_Equals_Z() {
+        // Boundary case: X + Y = Z should NOT trigger migration (strict >)
+        QuantumRiskInput input = new QuantumRiskInput();
+        input.setAlgorithm("RSA");
+        input.setMigrationTimeYears(5);
+        input.setDataLifetimeYears(5);
+        input.setThreatHorizonYears(10);
+        
+        QuantumRiskResult result = engine.assessQuantumRisk(input);
+        
+        assertFalse(result.isMoscaConditionMet());
+        assertFalse(result.isMigrationRequired());
+        assertEquals(10, result.getTotalExposureYears());
     }
 }

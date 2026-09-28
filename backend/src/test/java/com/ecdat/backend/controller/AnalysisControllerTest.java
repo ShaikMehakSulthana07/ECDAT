@@ -48,11 +48,9 @@ class AnalysisControllerTest {
         return testTarget.getAbsolutePath();
     }
 
-    // 1. Successful analysis endpoint test
     @Test
     void testAnalyzeEndpointSuccess() throws Exception {
-        // Skip this test as it requires the ecdat.allowed.analysis-directory property to be configured
-        // This is an integration test that requires specific configuration
+
         Assumptions.assumeTrue(false, "Path-based analysis endpoint requires configuration, skipping test");
         
         String testPath = getTestTargetAbsolutePath();
@@ -84,7 +82,6 @@ class AnalysisControllerTest {
         assertTrue(root.get("cbom").get("components").size() > 0, "CBOM components should not be empty");
     }
 
-    // 2. Empty or missing input returns 400 Bad Request
     @Test
     void testAnalyzeEndpointMissingInput() throws Exception {
         MvcResult result = mockMvc.perform(post("/api/analyze")
@@ -101,7 +98,6 @@ class AnalysisControllerTest {
         assertFalse(body.contains("Exception"), "Stack trace must not be in response body");
     }
 
-    // 3. Invalid nonexistent directory returns 400 Bad Request
     @Test
     void testAnalyzeEndpointInvalidPath() throws Exception {
         String requestJson = "{\"path\": \"nonexistent/directory/12345\"}";
@@ -119,7 +115,6 @@ class AnalysisControllerTest {
         assertFalse(node.has("stackTrace"), "Stack trace must not be exposed");
     }
 
-    // 4. Successful upload analysis endpoint test
     @Test
     void testUploadEndpointSuccess() throws Exception {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();

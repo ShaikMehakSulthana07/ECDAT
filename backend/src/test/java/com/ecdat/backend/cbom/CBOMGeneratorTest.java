@@ -98,12 +98,144 @@ class CBOMGeneratorTest {
         CBOMDocument document = generator.generate(assessments, new ArrayList<>());
 
         CBOMComponent component = document.getComponents().get(0);
+
         assertEquals("src/main/java/com/example/CryptoUtil.java", component.getCryptoProperties().getSourceFile());
         assertEquals(42, component.getCryptoProperties().getSourceLine());
         assertEquals("Cipher.getInstance(\"AES\")", component.getCryptoProperties().getEvidence());
     }
 
-    // Test 5 — Confidence preservation
+    // Test 5 — JSON serialization and structure
+    @Test
+    void testJsonSerialization() throws IOException {
+        CryptoFinding finding = createFinding("AES", CryptoFinding.Purpose.ENCRYPTION);
+        finding.setFile("src/main/java/com/example/CryptoUtil.java");
+        finding.setLine(42);
+        finding.setEvidence("Cipher.getInstance(\"AES/GCM/NoPadding\")");
+        finding.setKeySize(256);
+        finding.setMode("GCM");
+        finding.setPadding("NoPadding");
+        finding.setConfidence(CryptoFinding.Confidence.HIGH);
+        finding.setSourceType("JAVA_AST");
+
+        RiskAssessment assessment = createAssessment(finding, 18, RiskLevel.LOW, QuantumRisk.LOW);
+
+        List<RiskAssessment> assessments = List.of(assessment);
+        CBOMDocument document = generator.generate(assessments, new ArrayList<>());
+
+        String json = generator.toJson(document);
+        
+        // Verify JSON structure
+        JsonNode rootNode = objectMapper.readTree(json);
+        
+        assertEquals("CycloneDX", rootNode.get("bomFormat").asText());
+        assertEquals("1.6", rootNode.get("specVersion").asText());
+        assertTrue(rootNode.has("serialNumber"));
+        assertEquals(1, rootNode.get("version").asInt());
+        assertTrue(rootNode.has("metadata"));
+        assertTrue(rootNode.has("components"));
+        
+        JsonNode components = rootNode.get("components");
+        assertEquals(1, components.size());
+        
+        JsonNode component = components.get(0);
+        assertEquals("cryptographic-asset", component.get("type").asText());
+        assertTrue(component.has("name"));
+        assertTrue(component.has("description"));
+        assertTrue(component.has("cryptoProperties"));
+        assertTrue(component.has("properties"));
+        
+        JsonNode cryptoProps = component.get("cryptoProperties");
+        assertEquals("AES", cryptoProps.get("algorithm").asText());
+        assertEquals("ENCRYPTION", cryptoProps.get("purpose").asText());
+        assertEquals(256, cryptoProps.get("keySize").asInt());
+        assertEquals("GCM", cryptoProps.get("mode").asText());
+        assertEquals("NoPadding", cryptoProps.get("padding").asText());
+        assertEquals("src/main/java/com/example/CryptoUtil.java", cryptoProps.get("sourceFile").asText());
+        assertEquals(42, cryptoProps.get("sourceLine").asInt());
+        assertEquals("Cipher.getInstance(\"AES/GCM/NoPadding\")", cryptoProps.get("evidence").asText());
+        assertEquals("HIGH", cryptoProps.get("confidence").asText());
+        assertEquals("JAVA_AST", cryptoProps.get("sourceType").asText());
+        
+        JsonNode riskInfo = cryptoProps.get("risk");
+        assertNotNull(riskInfo);
+        assertEquals("LOW", riskInfo.get("riskLevel").asText());
+        assertEquals(18, riskInfo.get("riskScore").asInt());
+        assertEquals("LOW", riskInfo.get("quantumRisk").asText());
+        assertTrue(riskInfo.has("riskFactors"));
+        
+        // Verify ECDAT-specific properties
+        JsonNode properties = component.get("properties");
+        assertTrue(properties.isArray());
+        
+        boolean foundRiskVersion = false;
+        boolean foundConfidencePreserved = false;
+        for (JsonNode prop : properties) {
+            String name = prop.get("name").asText();
+            if ("ecdat:risk_assessment_version".equals(name)) {
+                foundRiskVersion = true;
+                assertEquals("prototype", prop.get("value").asText());
+            }
+            if ("ecdat:confidence_preserved".equals(name)) {
+                foundConfidencePreserved = true;
+                assertEquals("true", prop.get("value").asText());
+            }
+        }
+        assertTrue(foundRiskVersion, "ecdat:risk_assessment_version property not found");
+        assertTrue(foundConfidencePreserved, "ecdat:confidence_preserved property not found");
+    }
+
+    // Test 6 — Deterministic component names
+    @Test
+    void testDeterministicComponentNames() throws IOException {
+        CryptoFinding finding1 = createFinding("AES", CryptoFinding.Purpose.ENCRYPTION);
+        finding1.setFile("src/main/java/com/example/CryptoUtil.java");
+        finding1.setLine(42);
+        
+        CryptoFinding finding2 = createFinding("AES", CryptoFinding.Purpose.ENCRYPTION);
+        finding2.setFile("src/main/java/com/example/CryptoUtil.java");
+        finding2.setLine(42);
+        
+        RiskAssessment assessment1 = createAssessment(finding1, 10, RiskLevel.LOW, QuantumRisk.NONE);
+        RiskAssessment assessment2 = createAssessment(finding2, 10, RiskLevel.LOW, QuantumRisk.NONE);
+        
+        CBOMDocument document1 = generator.generate(List.of(assessment1), new ArrayList<>());
+        CBOMDocument document2 = generator.generate(List.of(assessment2), new ArrayList<>());
+        
+        String name1 = document1.getComponents().get(0).getName();
+        String name2 = document2.getComponents().get(0).getName();
+        
+        assertEquals(name1, name2, "Component names should be deterministic for identical findings");
+    }
+
+    // Test 7 — Unknown quantum status handling
+    @Test
+    void testUnknownQuantumStatusHandling() throws IOException {
+        CryptoFinding finding = createFinding("UNKNOWN", CryptoFinding.Purpose.UNKNOWN);
+        finding.setConfidence(CryptoFinding.Confidence.LOW);
+        
+        RiskAssessment assessment = createAssessment(finding, 0, RiskLevel.LOW, QuantumRisk.NONE);
+        
+        List<RiskAssessment> assessments = List.of(assessment);
+        CBOMDocument document = generator.generate(assessments, new ArrayList<>());
+        
+        String json = generator.toJson(document);
+        JsonNode rootNode = objectMapper.readTree(json);
+        
+        JsonNode component = rootNode.get("components").get(0);
+        JsonNode cryptoProps = component.get("cryptoProperties");
+        
+        assertEquals("UNKNOWN", cryptoProps.get("algorithm").asText());
+        assertEquals("UNKNOWN", cryptoProps.get("purpose").asText());
+        assertEquals("LOW", cryptoProps.get("confidence").asText());
+        
+        // Should not have quantum risk info for unknown algorithms
+        JsonNode riskInfo = cryptoProps.get("risk");
+        assertNotNull(riskInfo);
+        // quantumRisk should be present but may be NONE for unknown
+        assertTrue(riskInfo.has("quantumRisk"));
+    }
+
+    // Test 8 — Confidence preservation
     @Test
     void testConfidencePreservation() throws IOException {
         CryptoFinding finding = createFinding("AES", CryptoFinding.Purpose.ENCRYPTION);
@@ -118,7 +250,7 @@ class CBOMGeneratorTest {
         assertEquals("HIGH", component.getCryptoProperties().getConfidence());
     }
 
-    // Test 6 — Multiple algorithms
+    // Test 9 — Multiple algorithms
     @Test
     void testMultipleAlgorithms() throws IOException {
         List<CryptoFinding> findings = List.of(
@@ -142,7 +274,7 @@ class CBOMGeneratorTest {
         assertEquals(8, document.getComponents().size());
     }
 
-    // Test 7 — Missing optional information
+    // Test 10 — Missing optional information
     @Test
     void testMissingOptionalInformation() throws IOException {
         CryptoFinding finding = new CryptoFinding();
@@ -159,7 +291,7 @@ class CBOMGeneratorTest {
         assertEquals(1, document.getComponents().size());
     }
 
-    // Test 8 — Empty input
+    // Test 11 — Empty input
     @Test
     void testEmptyInput() throws IOException {
         CBOMDocument document = generator.generate(new ArrayList<>(), new ArrayList<>());
@@ -170,7 +302,7 @@ class CBOMGeneratorTest {
         assertEquals("1.6", document.getSpecVersion());
     }
 
-    // Test 9 — Determinism
+    // Test 12 — Determinism
     @Test
     void testDeterminism() throws IOException {
         CryptoFinding finding = createFinding("AES", CryptoFinding.Purpose.ENCRYPTION);
@@ -195,7 +327,7 @@ class CBOMGeneratorTest {
         assertEquals(node1.get("metadata"), node2.get("metadata"));
     }
 
-    // Test 10 — Negative test (CBOM generation must NOT calculate new risk)
+    // Test 13 — Negative test (CBOM generation must NOT calculate new risk)
     @Test
     void testCBOMDoesNotCalculateNewRisk() throws IOException {
         CryptoFinding finding = createFinding("AES", CryptoFinding.Purpose.ENCRYPTION);
@@ -212,9 +344,9 @@ class CBOMGeneratorTest {
         assertEquals("LOW", riskInfo.getRiskLevel());
     }
 
-    // Test 11 — JSON serialization
+    // Test 14 — JSON serialization
     @Test
-    void testJsonSerialization() throws IOException {
+    void testJsonSerializationBasic() throws IOException {
         CryptoFinding finding = createFinding("AES", CryptoFinding.Purpose.ENCRYPTION);
         RiskAssessment assessment = createAssessment(finding, 10, RiskLevel.LOW, QuantumRisk.NONE);
 
@@ -227,7 +359,7 @@ class CBOMGeneratorTest {
         assertTrue(json.endsWith("}"));
     }
 
-    // Test 12 — Valid JSON structure
+    // Test 15 — Valid JSON structure
     @Test
     void testValidJsonStructure() throws IOException {
         CryptoFinding finding = createFinding("AES", CryptoFinding.Purpose.ENCRYPTION);
@@ -247,7 +379,7 @@ class CBOMGeneratorTest {
         assertTrue(root.has("metadata"));
     }
 
-    // Test 13 — JSON can be parsed as valid JSON
+    // Test 16 — JSON can be parsed as valid JSON
     @Test
     void testJsonCanBeParsed() throws IOException {
         CryptoFinding finding = createFinding("AES", CryptoFinding.Purpose.ENCRYPTION);
@@ -263,7 +395,7 @@ class CBOMGeneratorTest {
         assertNotNull(root);
     }
 
-    // Test 14 — Mode and padding preservation in CBOM
+    // Test 17 — Mode and padding preservation in CBOM
     @Test
     void testModeAndPaddingInCBOM() throws IOException {
         CryptoFinding finding = createFinding("AES", CryptoFinding.Purpose.ENCRYPTION);
@@ -283,6 +415,43 @@ class CBOMGeneratorTest {
         JsonNode cryptoProps = root.get("components").get(0).get("cryptoProperties");
         assertEquals("GCM", cryptoProps.get("mode").asText());
         assertEquals("NoPadding", cryptoProps.get("padding").asText());
+    }
+
+    // Test 18 — Quantum vulnerability status serialization for UNKNOWN
+    @Test
+    void testQuantumVulnerabilityStatusUnknownSerialization() throws IOException {
+        CryptoFinding finding = createFinding("UNKNOWN_ALGORITHM", CryptoFinding.Purpose.ENCRYPTION);
+        RiskAssessment assessment = createAssessment(finding, 10, RiskLevel.LOW, QuantumRisk.NONE);
+        
+        // Create a quantum risk result with UNKNOWN status
+        com.ecdat.backend.risk.quantum.QuantumRiskResult quantumResult = 
+            new com.ecdat.backend.risk.quantum.QuantumRiskResult();
+        quantumResult.setAlgorithm("UNKNOWN_ALGORITHM");
+        quantumResult.setQuantumVulnerabilityStatus(com.ecdat.backend.risk.quantum.QuantumVulnerabilityStatus.UNKNOWN);
+        quantumResult.setQuantumVulnerable(false);
+        quantumResult.setMigrationRequired(false);
+        quantumResult.setMigrationUrgency(com.ecdat.backend.risk.quantum.MigrationUrgency.UNKNOWN);
+        quantumResult.setExplanation("Quantum vulnerability cannot be determined.");
+        assessment.setQuantumRiskResult(quantumResult);
+
+        List<RiskAssessment> assessments = List.of(assessment);
+        CBOMDocument document = generator.generate(assessments, new ArrayList<>());
+
+        CBOMComponent component = document.getComponents().get(0);
+        CBOMRiskInfo riskInfo = component.getCryptoProperties().getRisk();
+
+        assertNotNull(riskInfo);
+        assertEquals("UNKNOWN", riskInfo.getQuantumVulnerabilityStatus());
+        assertEquals(Boolean.FALSE, riskInfo.getQuantumVulnerable());
+        assertEquals("UNKNOWN", riskInfo.getMigrationUrgency());
+        assertTrue(riskInfo.getQuantumRiskExplanation().contains("cannot be determined"));
+
+        // Verify JSON serialization
+        String json = generator.toJson(document);
+        JsonNode root = objectMapper.readTree(json);
+        JsonNode cryptoProps = root.get("components").get(0).get("cryptoProperties");
+        JsonNode riskNode = cryptoProps.get("risk");
+        assertEquals("UNKNOWN", riskNode.get("quantumVulnerabilityStatus").asText());
     }
 
     // Helper methods

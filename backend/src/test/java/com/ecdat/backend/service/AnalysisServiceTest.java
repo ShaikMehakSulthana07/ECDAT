@@ -306,4 +306,61 @@ class AnalysisServiceTest {
         assertThrows(IllegalArgumentException.class,
                 () -> analysisService.analyze(new ScanRequest(null, "unknown")));
     }
+
+    // Regression test: Ensure binary and container scanners are invoked exactly once
+    @Test
+    void testNoDuplicateFindingsFromBinaryScanning(@TempDir Path tempDir) throws IOException {
+        // Create a Java file with crypto usage
+        Path cryptoFile = tempDir.resolve("CryptoApp.java");
+        Files.writeString(cryptoFile, "import javax.crypto.Cipher;\npublic class CryptoApp {\n" +
+                "  public void run() throws Exception {\n" +
+                "    Cipher c = Cipher.getInstance(\"AES/GCM/NoPadding\");\n" +
+                "  }\n}\n");
+
+        ProjectAnalysisContext context = new ProjectAnalysisContext();
+        AnalysisResponse response = analysisService.analyzeDirectory(tempDir.toString(), context);
+
+        assertNotNull(response);
+        assertEquals("SUCCESS", response.getStatus());
+
+        // Count findings by unique identifier (algorithm + file + line)
+        // If scanners were invoked twice, we'd see duplicate findings
+        long uniqueFindings = response.getFindings().stream()
+                .map(f -> f.getAlgorithm() + "|" + f.getFile() + "|" + f.getLine())
+                .distinct()
+                .count();
+
+        assertEquals(response.getFindings().size(), uniqueFindings,
+                "Findings should not be duplicated - each finding should be unique");
+    }
+
+    // Regression test: Ensure container scanning does not produce duplicates
+    @Test
+    void testNoDuplicateFindingsFromContainerScanning(@TempDir Path tempDir) throws IOException {
+        // Create a mock container image structure with manifest.json
+        Path manifestPath = tempDir.resolve("manifest.json");
+        Files.writeString(manifestPath, "{\"mock\": \"container\"}");
+
+        // Add a Java file with crypto
+        Path cryptoFile = tempDir.resolve("app.java");
+        Files.writeString(cryptoFile, "import javax.crypto.Cipher;\npublic class App {\n" +
+                "  public void run() throws Exception {\n" +
+                "    Cipher c = Cipher.getInstance(\"AES/GCM/NoPadding\");\n" +
+                "  }\n}\n");
+
+        ProjectAnalysisContext context = new ProjectAnalysisContext();
+        AnalysisResponse response = analysisService.analyzeDirectory(tempDir.toString(), context);
+
+        assertNotNull(response);
+        assertEquals("SUCCESS", response.getStatus());
+
+        // Count findings by unique identifier
+        long uniqueFindings = response.getFindings().stream()
+                .map(f -> f.getAlgorithm() + "|" + f.getFile() + "|" + f.getLine())
+                .distinct()
+                .count();
+
+        assertEquals(response.getFindings().size(), uniqueFindings,
+                "Findings should not be duplicated from container scanning");
+    }
 }

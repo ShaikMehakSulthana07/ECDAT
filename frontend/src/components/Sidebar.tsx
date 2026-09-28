@@ -49,7 +49,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           {!isCollapsed && (
             <div className="sidebar-brand-text">
               <span className="sidebar-brand-title">CRYPTAGUARD</span>
-              <span className="sidebar-brand-sub">Enterprise Security</span>
+              <span className="sidebar-brand-sub">Demo Workspace</span>
             </div>
           )}
         </div>

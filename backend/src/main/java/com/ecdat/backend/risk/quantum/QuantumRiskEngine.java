@@ -32,8 +32,9 @@ public class QuantumRiskEngine {
 
         String algorithm = input.getAlgorithm() != null ? input.getAlgorithm().toUpperCase() : "UNKNOWN";
         
-        // Determine if algorithm is quantum-vulnerable
-        boolean quantumVulnerable = isQuantumVulnerable(algorithm);
+        // Determine quantum vulnerability status
+        QuantumVulnerabilityStatus quantumVulnerabilityStatus = determineQuantumVulnerabilityStatus(algorithm);
+        boolean quantumVulnerable = quantumVulnerabilityStatus == QuantumVulnerabilityStatus.VULNERABLE;
         
         // Calculate Mosca condition: X + Y > Z
         int migrationTime = input.getMigrationTimeYears();
@@ -51,6 +52,7 @@ public class QuantumRiskEngine {
         
         // Determine migration urgency based on multiple factors
         MigrationUrgency urgency = determineMigrationUrgency(
+            quantumVulnerabilityStatus,
             quantumVulnerable, 
             migrationRequired, 
             moscaConditionMet,
@@ -63,6 +65,7 @@ public class QuantumRiskEngine {
         // Generate explanation
         String explanation = generateExplanation(
             algorithm,
+            quantumVulnerabilityStatus,
             quantumVulnerable,
             migrationRequired,
             migrationTime,
@@ -87,8 +90,9 @@ public class QuantumRiskEngine {
             algorithm, quantumVulnerable
         );
         
-        return new QuantumRiskResult(
+        QuantumRiskResult result = new QuantumRiskResult(
             algorithm,
+            quantumVulnerabilityStatus,
             quantumVulnerable,
             migrationRequired,
             migrationTime,
@@ -103,26 +107,40 @@ public class QuantumRiskEngine {
             explanation,
             calculationDetails
         );
+        
+        // Set value source attribution
+        result.setMigrationTimeYearsSource(input.getMigrationTimeYearsSource());
+        result.setDataLifetimeYearsSource(input.getDataLifetimeYearsSource());
+        result.setThreatHorizonYearsSource(input.getThreatHorizonYearsSource());
+        result.setBusinessCriticalitySource(input.getBusinessCriticalitySource());
+        result.setDataSensitivitySource(input.getDataSensitivitySource());
+        
+        return result;
     }
     
     /**
-     * Determine if an algorithm is vulnerable to quantum attacks.
+     * Determine quantum vulnerability status of an algorithm.
      * 
      * @param algorithm the cryptographic algorithm
-     * @return true if quantum-vulnerable, false otherwise
+     * @return QuantumVulnerabilityStatus (VULNERABLE, NOT_QUANTUM_VULNERABLE, or UNKNOWN)
      */
-    private boolean isQuantumVulnerable(String algorithm) {
+    private QuantumVulnerabilityStatus determineQuantumVulnerabilityStatus(String algorithm) {
         if (algorithm == null) {
-            return false;
+            return QuantumVulnerabilityStatus.UNKNOWN;
         }
         
         // Public-key algorithms vulnerable to Shor's algorithm
         return switch (algorithm) {
-            case "RSA", "ECDSA", "ECDH", "DH", "DSA", "EC" -> true;
+            case "RSA", "ECDSA", "ECDH", "DH", "DSA", "EC" -> QuantumVulnerabilityStatus.VULNERABLE;
             // Symmetric algorithms and hash functions are more quantum-resistant
-            // (affected by Grover's algorithm but require doubling key size)
-            case "AES", "DES", "3DES", "CHAHA20", "SHA-1", "SHA-256", "SHA-512", "SHA-3", "MD5" -> false;
-            default -> false; // Conservative default - unknown algorithms assumed not vulnerable
+            // (affected by Grover's algorithm but can be mitigated by doubling key size)
+            case "AES", "DES", "3DES", "CHAHA20", "SHA-1", "SHA-256", "SHA-512", "SHA-3", "MD5" -> 
+                QuantumVulnerabilityStatus.NOT_QUANTUM_VULNERABLE;
+            // Post-quantum algorithms (ML-DSA, ML-KEM, etc.)
+            case "ML-DSA", "ML-KEM", "FALCON", "SPHINCS+", "CRYSTALS-KYBER", "CRYSTALS-DILITHIUM" ->
+                QuantumVulnerabilityStatus.NOT_QUANTUM_VULNERABLE;
+            // Unknown algorithm - cannot determine vulnerability
+            default -> QuantumVulnerabilityStatus.UNKNOWN;
         };
     }
     
@@ -130,6 +148,7 @@ public class QuantumRiskEngine {
      * Determine migration urgency based on quantum risk and business context.
      */
     private MigrationUrgency determineMigrationUrgency(
+        QuantumVulnerabilityStatus quantumVulnerabilityStatus,
         boolean quantumVulnerable,
         boolean migrationRequired,
         boolean moscaConditionMet,
@@ -138,6 +157,11 @@ public class QuantumRiskEngine {
         BusinessCriticality businessCriticality,
         DataSensitivity dataSensitivity
     ) {
+        // If vulnerability status is UNKNOWN, urgency cannot be determined
+        if (quantumVulnerabilityStatus == QuantumVulnerabilityStatus.UNKNOWN) {
+            return MigrationUrgency.UNKNOWN;
+        }
+        
         // If not quantum-vulnerable, no migration needed
         if (!quantumVulnerable) {
             return MigrationUrgency.NONE;
@@ -177,6 +201,7 @@ public class QuantumRiskEngine {
      */
     private String generateExplanation(
         String algorithm,
+        QuantumVulnerabilityStatus quantumVulnerabilityStatus,
         boolean quantumVulnerable,
         boolean migrationRequired,
         int migrationTime,
@@ -191,7 +216,15 @@ public class QuantumRiskEngine {
         StringBuilder explanation = new StringBuilder();
         
         explanation.append("Algorithm: ").append(algorithm).append("\n");
-        explanation.append("Quantum Vulnerable: ").append(quantumVulnerable ? "YES" : "NO").append("\n");
+        explanation.append("Quantum Vulnerability Status: ").append(quantumVulnerabilityStatus).append("\n");
+        
+        if (quantumVulnerabilityStatus == QuantumVulnerabilityStatus.UNKNOWN) {
+            explanation.append("Result: Quantum vulnerability cannot be determined.\n");
+            explanation.append("Reason: ECDAT does not have a classification rule for this algorithm. ")
+                      .append("The algorithm may be vulnerable or resistant to quantum attacks. ")
+                      .append("Manual review by a cryptographer is recommended.\n");
+            return explanation.toString();
+        }
         
         if (quantumVulnerable) {
             explanation.append("Migration Time: ").append(migrationTime).append(" years\n");
@@ -224,7 +257,8 @@ public class QuantumRiskEngine {
         } else {
             explanation.append("Result: This algorithm is not considered quantum-vulnerable.\n");
             explanation.append("Reason: ").append(algorithm)
-                      .append(" is a symmetric algorithm or hash function, which has better quantum resistance.\n");
+                      .append(" is a symmetric algorithm, hash function, or post-quantum algorithm, ")
+                      .append("which has better quantum resistance.\n");
         }
         
         return explanation.toString();

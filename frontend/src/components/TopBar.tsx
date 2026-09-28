@@ -44,6 +44,9 @@ export const TopBar: React.FC<TopBarProps> = ({
       <div className="topbar-left">
         <div className="breadcrumb-trail">
           <span>CRYPTAGUARD</span>
+          <span className="demo-workspace-pill" title="Prototype Demonstration Session">
+            Demo Workspace
+          </span>
           <span className="breadcrumb-sep">/</span>
           <span className="breadcrumb-active">{pageTitles[activePage] || 'Overview'}</span>
           {targetPath && (

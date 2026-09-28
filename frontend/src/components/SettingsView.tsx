@@ -99,10 +99,18 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                     </td>
                   </tr>
                   <tr>
-                    <th>Session</th>
+                    <th>Session Mode</th>
                     <td>
                       <span className="risk-badge low">
-                        Local Development Session (ACTIVE)
+                        Prototype Authentication · Demo Workspace (ACTIVE)
+                      </span>
+                    </td>
+                  </tr>
+                  <tr>
+                    <th>Auth Mechanism</th>
+                    <td>
+                      <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+                        Client-side demonstration session stored in browser <code>localStorage</code>. No backend authentication or JWT verification is performed in prototype mode.
                       </span>
                     </td>
                   </tr>
